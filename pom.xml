@@ -8,7 +8,7 @@
     <groupId>com.kinnarastudio</groupId>
     <artifactId>kinnara-odoo-xmlrpc</artifactId>
     <url>https://github.com/kinnara-digital-studio/kinnara-odoo-xmlrpc/wiki</url>
-    <version>0.0.1-BETA</version>
+    <version>0.1.1-BETA</version>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>

@@ -28,7 +28,7 @@ public class OdooTest {
         user = properties.get("user").toString();
         apiKey = properties.get("apiKey").toString();
 
-        rpc = new OdooRpc(baseUrl, database, user, apiKey);
+        rpc = new OdooRpc(baseUrl, database, user, apiKey, (method, args) -> System.out.println(method.getName() +" = "+ (args == null ? "NULL" : Arrays.stream(args).map(String::valueOf).collect(Collectors.joining(";")))));
     }
 
     @Test
