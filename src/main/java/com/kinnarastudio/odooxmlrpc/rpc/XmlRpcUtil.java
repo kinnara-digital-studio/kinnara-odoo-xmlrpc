@@ -1,4 +1,4 @@
-package com.kinnarastudio.odooxmlrpc;
+package com.kinnarastudio.odooxmlrpc.rpc;
 
 import org.apache.xmlrpc.XmlRpcException;
 import org.apache.xmlrpc.client.XmlRpcClient;
