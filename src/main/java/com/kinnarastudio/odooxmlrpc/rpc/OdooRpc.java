@@ -336,15 +336,13 @@ public class OdooRpc {
                     new Object[]{row},
             };
 
-            int recordId = (int) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
-
             if (onExecute != null) {
                 Method method = getClass().getDeclaredMethod("create", String.class, Map.class);
                 Object[] arguments = new Object[]{model, row};
                 onExecute.accept(method, arguments);
             }
 
-            return recordId;
+            return (int) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
 
         } catch (MalformedURLException | XmlRpcException | OdooAuthorizationException | NoSuchMethodException e) {
             throw new OdooCallMethodException(e);
