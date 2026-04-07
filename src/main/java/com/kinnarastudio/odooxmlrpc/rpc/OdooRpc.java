@@ -9,6 +9,7 @@ import com.kinnarastudio.odooxmlrpc.model.SearchFilter;
 import org.apache.xmlrpc.XmlRpcException;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.net.MalformedURLException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -113,11 +114,7 @@ public class OdooRpc {
         try {
             final int uid = login();
 
-            final Object[] objectFilters = Optional.ofNullable(filters)
-                    .stream()
-                    .flatMap(Arrays::stream)
-                    .map(f -> new Object[]{f.getField(), f.getOperator(), f.getValue()})
-                    .toArray(Object[]::new);
+            final Object[] objectFilters = prefixization(filters);
 
             final Object[] params = new Object[]{
                     database,
@@ -161,12 +158,7 @@ public class OdooRpc {
         try {
             final int uid = login();
 
-            final Object[] objectFilters = Optional.ofNullable(filters)
-                    .stream()
-                    .flatMap(Arrays::stream)
-                    .map(f -> new Object[]{f.getField(), f.getOperator(), f.getValue()})
-                    .toArray(Object[]::new);
-
+            final Object[] objectFilters = prefixization(filters);
 
             final Object[] params = new Object[]{
                     database,
@@ -210,11 +202,7 @@ public class OdooRpc {
         try {
             final int uid = login();
 
-            final Object[] objectFilters = Optional.ofNullable(filters)
-                    .stream()
-                    .flatMap(Arrays::stream)
-                    .map(f -> new Object[]{f.getField(), f.getOperator(), f.getValue()})
-                    .toArray(Object[]::new);
+            final Object[] objectFilters = prefixization(filters);
 
             final Object[] params = new Object[]{
                     database,
@@ -392,6 +380,99 @@ public class OdooRpc {
             return (int) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
         } catch (OdooAuthorizationException | MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
+        }
+    }
+
+    public Object[] prefixization(SearchFilter[] filters) {
+        if (filters == null || filters.length == 0) {
+            return new Object[0];
+        }
+
+        List<Object> result = new ArrayList<>();
+        for (SearchFilter filter : filters) {
+            if(result.isEmpty()) {
+                result.add(new Operand(filter));
+            } else {
+                SearchFilter.Join operator = filter.getJoin();
+                result.add(0, operator);
+                result.add(new Operand(filter));
+            }
+        }
+
+        return result.toArray();
+    }
+
+
+    @Nullable
+    public Object[] mathematicPrefixization(SearchFilter[] filters) {
+        if (filters == null || filters.length == 0) {
+            return new Object[0];
+        }
+
+        Stack<List<Object>> operandStack = new Stack<>();
+        Stack<SearchFilter.Join> operatorStack = new Stack<>();
+
+        for (SearchFilter filter : filters) {
+            if (operandStack.isEmpty()) {
+                operandStack.push(new ArrayList<>() {{
+                    add(new Operand(filter));
+                }});
+            } else {
+                SearchFilter.Join operator = filter.getJoin();
+                if (operator == SearchFilter.Join.OR) {
+                    operatorStack.push(operator);
+                    operandStack.push(new ArrayList<>() {{
+                        add(new Operand(filter));
+                    }});
+                } else {
+                    List<Object> pop = operandStack.pop();
+                    pop.add(0, operator);
+                    pop.add(0, new Operand(filter));
+                    operandStack.push(pop);
+                }
+            }
+        }
+
+        List<Object> result = new ArrayList<>();
+        while (!operatorStack.isEmpty()) {
+            SearchFilter.Join operator = operatorStack.pop();
+            List<Object> right = operandStack.pop();
+            List<Object> left = operandStack.pop();
+
+            result.add(operator);
+            result.add(left);
+            result.add(right);
+        }
+
+        return result.toArray();
+    }
+
+    public static class Operand {
+        private final String field;
+        private final SearchFilter.Operator operator;
+        private final Object value;
+
+        public Operand(SearchFilter filter) {
+            this(filter.getField(), filter.getOperator(), filter.getValue());
+        }
+
+        public Operand(String field, SearchFilter.Operator operator, Object value) {
+            this.field = field;
+            this.operator = operator;
+            this.value = value;
+        }
+
+        public Object[] toObjects() {
+            return new Object[]{
+                    field,
+                    operator.toString(),
+                    value
+            };
+        }
+
+        @Override
+        public String toString() {
+            return "[" + field + "," + operator + "," + value + "]";
         }
     }
 }

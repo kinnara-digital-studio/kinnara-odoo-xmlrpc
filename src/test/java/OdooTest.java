@@ -43,10 +43,14 @@ public class OdooTest {
         final OdooRpc rpc = new OdooRpc(baseUrl, database, user, apiKey);
 
         final Collection<Integer> records = new HashSet<>();
-        String model = "stock.movements.line";
+        String model = "hr.employee";
 
 //        SearchFilter[] filters = SearchFilter.single("movement_id", 9);
-        SearchFilter[] filters = null;
+        SearchFilter[] filters = new SearchFilter[] {
+                new SearchFilter(SearchFilter.Join.OR, "id", 1),
+                new SearchFilter(SearchFilter.Join.OR, "id", 2),
+                new SearchFilter(SearchFilter.Join.OR, "id", SearchFilter.Operator.GREATER, 1),
+        };
         for (Map<String, Object> record : rpc.searchRead(model, filters, "id", null, null)) {
             System.out.println(record.entrySet().stream().map(e -> e.getKey() + "->" + e.getValue()).collect(Collectors.joining(" | ")));
         }
@@ -132,6 +136,19 @@ public class OdooTest {
     @Test
     public void testBus() throws OdooCallMethodException {
         int messageId = rpc.messagePost("purchase.order", 54, "Sending from kecak [" + new Date() + "]");
+    }
+
+    @Test
+    public void prefixization() {
+        Object[] result = rpc.prefixization(new SearchFilter[]{
+                new SearchFilter(SearchFilter.Join.OR, "id", 1),
+                new SearchFilter(SearchFilter.Join.OR, "id", 2),
+                new SearchFilter(SearchFilter.Join.AND, "id", 2),
+        });
+
+        for (Object o : result) {
+            System.out.println(o);
+        }
     }
 
 
