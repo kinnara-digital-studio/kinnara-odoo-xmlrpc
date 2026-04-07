@@ -43,15 +43,16 @@ public class OdooTest {
         final OdooRpc rpc = new OdooRpc(baseUrl, database, user, apiKey);
 
         final Collection<Integer> records = new HashSet<>();
-        String model = "hr.employee";
+        String model = "product.template";
 
 //        SearchFilter[] filters = SearchFilter.single("movement_id", 9);
         SearchFilter[] filters = new SearchFilter[] {
-                new SearchFilter(SearchFilter.Join.OR, "id", 1),
-                new SearchFilter(SearchFilter.Join.OR, "id", 2),
-                new SearchFilter(SearchFilter.Join.OR, "id", SearchFilter.Operator.GREATER, 1),
+                new SearchFilter(SearchFilter.Join.AND, "id", 107),
+                new SearchFilter(SearchFilter.Join.OR, "id", 108),
+                new SearchFilter(SearchFilter.Join.OR, "id", 71),
+                new SearchFilter(SearchFilter.Join.AND, "name", SearchFilter.Operator.ILIKE, "BOX")
         };
-        for (Map<String, Object> record : rpc.searchRead(model, filters, "id", null, null)) {
+        for (Map<String, Object> record : rpc.searchRead(model, filters, null, null, null)) {
             System.out.println(record.entrySet().stream().map(e -> e.getKey() + "->" + e.getValue()).collect(Collectors.joining(" | ")));
         }
     }
@@ -83,7 +84,9 @@ public class OdooTest {
     @Test
     public void testWrite() throws OdooCallMethodException {
         String model = "stock.movements";
-        SearchFilter[] filter = SearchFilter.single("name", "PB00010");
+        SearchFilter[] filter = new SearchFilter[] {
+                new SearchFilter("name", "PB00010")
+        };
         int recordId = rpc.search(model, filter, null, null, 4)[0];
 
         rpc.write(model, recordId, new HashMap<>() {{

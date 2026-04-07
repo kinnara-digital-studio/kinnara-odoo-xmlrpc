@@ -389,17 +389,27 @@ public class OdooRpc {
         }
 
         List<Object> result = new ArrayList<>();
+
         for (SearchFilter filter : filters) {
-            if(result.isEmpty()) {
-                result.add(new Operand(filter));
+            if (result.isEmpty()) {
+                result.add(new SearchFilter.Operand(filter));
             } else {
                 SearchFilter.Join operator = filter.getJoin();
                 result.add(0, operator);
-                result.add(new Operand(filter));
+                result.add(new SearchFilter.Operand(filter));
             }
         }
 
-        return result.toArray();
+        return result.stream()
+                .map(o -> {
+                    if (o instanceof SearchFilter.Operand) {
+                        return ((SearchFilter.Operand) o).toObjects();
+                    } else if (o instanceof SearchFilter.Join) {
+                        return o.toString();
+                    } else {
+                        return o;
+                    }
+                }).toArray();
     }
 
 
@@ -415,19 +425,19 @@ public class OdooRpc {
         for (SearchFilter filter : filters) {
             if (operandStack.isEmpty()) {
                 operandStack.push(new ArrayList<>() {{
-                    add(new Operand(filter));
+                    add(new SearchFilter.Operand(filter));
                 }});
             } else {
                 SearchFilter.Join operator = filter.getJoin();
                 if (operator == SearchFilter.Join.OR) {
                     operatorStack.push(operator);
                     operandStack.push(new ArrayList<>() {{
-                        add(new Operand(filter));
+                        add(new SearchFilter.Operand(filter));
                     }});
                 } else {
                     List<Object> pop = operandStack.pop();
                     pop.add(0, operator);
-                    pop.add(0, new Operand(filter));
+                    pop.add(0, new SearchFilter.Operand(filter));
                     operandStack.push(pop);
                 }
             }
@@ -447,32 +457,5 @@ public class OdooRpc {
         return result.toArray();
     }
 
-    public static class Operand {
-        private final String field;
-        private final SearchFilter.Operator operator;
-        private final Object value;
 
-        public Operand(SearchFilter filter) {
-            this(filter.getField(), filter.getOperator(), filter.getValue());
-        }
-
-        public Operand(String field, SearchFilter.Operator operator, Object value) {
-            this.field = field;
-            this.operator = operator;
-            this.value = value;
-        }
-
-        public Object[] toObjects() {
-            return new Object[]{
-                    field,
-                    operator.toString(),
-                    value
-            };
-        }
-
-        @Override
-        public String toString() {
-            return "[" + field + "," + operator + "," + value + "]";
-        }
-    }
 }
