@@ -4,6 +4,7 @@ import com.kinnarastudio.odooxmlrpc.model.Field;
 import com.kinnarastudio.odooxmlrpc.model.SearchFilter;
 import com.kinnarastudio.odooxmlrpc.rpc.OdooRpc;
 import com.kinnarastudio.odooxmlrpc.rpc.XmlRpcUtil;
+import model.ProductTemplate;
 import org.junit.Test;
 
 import java.io.IOException;
