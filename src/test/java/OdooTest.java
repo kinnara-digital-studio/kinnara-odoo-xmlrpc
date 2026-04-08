@@ -3,6 +3,7 @@ import com.kinnarastudio.odooxmlrpc.exception.OdooCallMethodException;
 import com.kinnarastudio.odooxmlrpc.model.Field;
 import com.kinnarastudio.odooxmlrpc.model.SearchFilter;
 import com.kinnarastudio.odooxmlrpc.rpc.OdooRpc;
+import com.kinnarastudio.odooxmlrpc.rpc.XmlRpcUtil;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -47,10 +48,10 @@ public class OdooTest {
 
 //        SearchFilter[] filters = SearchFilter.single("movement_id", 9);
         SearchFilter[] filters = new SearchFilter[] {
-                new SearchFilter(SearchFilter.Join.AND, "id", 107),
+                new SearchFilter( "id", 107),
                 new SearchFilter(SearchFilter.Join.OR, "id", 108),
                 new SearchFilter(SearchFilter.Join.OR, "id", 71),
-                new SearchFilter(SearchFilter.Join.AND, "name", SearchFilter.Operator.ILIKE, "BOX")
+                new SearchFilter( "name", SearchFilter.Operator.ILIKE, "BOX")
         };
         for (Map<String, Object> record : rpc.searchRead(model, filters, null, null, null)) {
             System.out.println(record.entrySet().stream().map(e -> e.getKey() + "->" + e.getValue()).collect(Collectors.joining(" | ")));
@@ -143,7 +144,7 @@ public class OdooTest {
 
     @Test
     public void prefixization() {
-        Object[] result = rpc.prefixization(new SearchFilter[]{
+        Object[] result = XmlRpcUtil.prefixation(new SearchFilter[]{
                 new SearchFilter(SearchFilter.Join.OR, "id", 1),
                 new SearchFilter(SearchFilter.Join.OR, "id", 2),
                 new SearchFilter(SearchFilter.Join.AND, "id", 2),
