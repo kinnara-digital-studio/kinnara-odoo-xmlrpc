@@ -59,6 +59,24 @@ public class OdooTest {
     }
 
     @Test
+    public void testSearchWithClass() throws OdooCallMethodException {
+        final OdooRpc rpc = new OdooRpc(baseUrl, database, user, apiKey);
+
+        final Collection<Integer> records = new HashSet<>();
+
+//        SearchFilter[] filters = SearchFilter.single("movement_id", 9);
+        SearchFilter[] filters = new SearchFilter[] {
+                new SearchFilter( "id", 107),
+                new SearchFilter(SearchFilter.Join.OR, "id", 108),
+                new SearchFilter(SearchFilter.Join.OR, "id", 71),
+                new SearchFilter( "name", SearchFilter.Operator.ILIKE, "BOX")
+        };
+        for (ProductTemplate record : rpc.searchRead(ProductTemplate.class, filters, null, null, null)) {
+            System.out.println(record.toString());
+        }
+    }
+
+    @Test
     public void testRead() throws OdooCallMethodException {
 
         String model = "hr.employee";
@@ -72,7 +90,7 @@ public class OdooTest {
 
     @Test
     public void testFieldsGet() throws OdooCallMethodException {
-        final Collection<Field> fields = rpc.fieldsGet("hr.employee");
+        final Collection<Field> fields = rpc.fieldsGet(ProductTemplate.class);
 
         assert !fields.isEmpty();
 

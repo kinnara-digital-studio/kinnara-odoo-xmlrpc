@@ -1,6 +1,8 @@
 package com.kinnarastudio.odooxmlrpc.rpc;
 
 import com.kinnarastudio.commons.Try;
+import com.kinnarastudio.odooxmlrpc.annotation.OdooField;
+import com.kinnarastudio.odooxmlrpc.annotation.OdooModel;
 import com.kinnarastudio.odooxmlrpc.exception.OdooAuthorizationException;
 import com.kinnarastudio.odooxmlrpc.exception.OdooCallMethodException;
 import com.kinnarastudio.odooxmlrpc.model.Field;
@@ -95,6 +97,37 @@ public class OdooRpc {
     }
 
     /**
+     *
+     * @param tClass
+     * @return
+     * @throws OdooCallMethodException
+     */
+    public Collection<Field> fieldsGet(Class<?> tClass) throws OdooCallMethodException {
+        String model = getModel(tClass);
+        return fieldsGet(model);
+    }
+
+    /**
+     * Search
+     * <p>
+     * Implementation of odoo's xmlrpc <b>search()</b> method
+     *
+     * @param tClass
+     * @param filters
+     * @param order
+     * @param offset
+     * @param limit
+     * @param <T>
+     * @return
+     * @throws OdooCallMethodException
+     */
+    public <T> Integer[] search(Class<T> tClass, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
+        String model = getModel(tClass);
+        return search(model, filters, order, offset, limit);
+    }
+
+
+    /**
      * Search
      * <p>
      * Implementation of odoo's xmlrpc <b>search()</b> method
@@ -185,6 +218,30 @@ public class OdooRpc {
         }
     }
 
+    /**
+     * Search Read
+     * <p>
+     * Implementation of odoo's xmlrpc <b>search_read()</b> method
+     *
+     * @param tClass
+     * @param filters
+     * @param order
+     * @param offset
+     * @param limit
+     * @param <T>
+     * @return
+     * @throws OdooCallMethodException
+     */
+    public <T> T[] searchRead(Class<T> tClass, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
+        String model = getModel(tClass);
+        Map<String, Object>[] records = searchRead(model, filters, order, offset, limit);
+
+        return Arrays.stream(records)
+                .map(m -> parseRecord(tClass, m))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .toArray(size -> (T[]) java.lang.reflect.Array.newInstance(tClass, size));
+    }
 
     /**
      * Search Count
@@ -219,6 +276,12 @@ public class OdooRpc {
             throw new OdooCallMethodException(e);
         }
     }
+
+    public int searchCount(Class<?> tClazz, SearchFilter[] filters) throws OdooCallMethodException {
+        String model = getModel(tClazz);
+        return searchCount(model, filters);
+    }
+
 
     /**
      * Read
@@ -257,6 +320,18 @@ public class OdooRpc {
     }
 
     /**
+     *
+     * @param tClass
+     * @param recordId
+     * @return
+     * @throws OdooCallMethodException
+     */
+    public Optional<Map<String, Object>> read(Class<?> tClass, int recordId) throws OdooCallMethodException {
+        String model = getModel(tClass);
+        return read(model, recordId);
+    }
+
+    /**
      * Create
      * <p>
      * Implementation of odoo's xmlrpc <b>create()</b>
@@ -285,6 +360,18 @@ public class OdooRpc {
         } catch (MalformedURLException | XmlRpcException | OdooAuthorizationException e) {
             throw new OdooCallMethodException(e);
         }
+    }
+
+    /**
+     *
+     * @param row
+     * @return
+     * @throws OdooCallMethodException
+     */
+    public int create(Object row) throws OdooCallMethodException {
+        String model = getModel(row.getClass());
+        Map<String, Object> map = getRowMap(row);
+        return create(model, map);
     }
 
     /**
@@ -318,6 +405,18 @@ public class OdooRpc {
         }
     }
 
+    /**
+     *
+     * @param recordId
+     * @param row
+     * @throws OdooCallMethodException
+     */
+    public void write(int recordId, Object row) throws OdooCallMethodException {
+        String model = getModel(row.getClass());
+        Map<String, Object> map = getRowMap(row);
+        write(model, recordId, map);
+    }
+
 
     /**
      * Unlink
@@ -349,6 +448,11 @@ public class OdooRpc {
         }
     }
 
+    public void unlink(Class<?> tClass, int recordId) throws OdooCallMethodException {
+        String model = getModel(tClass);
+        unlink(model, recordId);
+    }
+
     /**
      *
      * @param model
@@ -359,6 +463,28 @@ public class OdooRpc {
         return messagePost(model, new int[]{recordId}, MessageType.COMMENT, body);
     }
 
+    /**
+     *
+     * @param tClass
+     * @param recordId
+     * @param body
+     * @return
+     * @throws OdooCallMethodException
+     */
+    public int messagePost(Class<?> tClass, int recordId, String body) throws OdooCallMethodException {
+        String model = getModel(tClass);
+        return messagePost(model, new int[]{recordId}, MessageType.COMMENT, body);
+    }
+
+    /**
+     *
+     * @param model
+     * @param recordIds
+     * @param messageType
+     * @param body
+     * @return
+     * @throws OdooCallMethodException
+     */
     public int messagePost(String model, int[] recordIds, MessageType messageType, String body) throws OdooCallMethodException {
         try {
             final int uid = login();
@@ -379,6 +505,63 @@ public class OdooRpc {
             return (int) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
         } catch (OdooAuthorizationException | MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
+        }
+    }
+
+    protected String getModel(Class<?> clazz) {
+        return Optional.of(clazz)
+                .map(c -> c.getAnnotation(OdooModel.class))
+                .map(OdooModel::value)
+                .orElseThrow(() -> new IllegalArgumentException("Class [" + clazz.getName() + "] is not annotated with @OdooModel"));
+    }
+
+    protected Map<String, Object> getRowMap(Object row) {
+        Map<String, Object> map = new HashMap<>();
+
+        Optional.ofNullable(row)
+                .map(Object::getClass)
+                .map(Class::getDeclaredFields)
+                .stream()
+                .flatMap(Arrays::stream)
+                .forEach(Try.onConsumer(f -> {
+                    f.setAccessible(true);
+                    String key = Optional.of(OdooField.class)
+                            .map(f::getAnnotation)
+                            .map(OdooField::value)
+                            .orElse(f.getName());
+                    Object value = f.get(row);
+                    map.put(key, value);
+                }, (Exception e) -> {
+                }));
+
+        return map;
+    }
+
+    protected <T> Optional<T> parseRecord(Class<T> tClass, Map<String, Object> record) {
+        try {
+            T instance = tClass.getDeclaredConstructor().newInstance();
+
+            record.forEach(Try.onBiConsumer((k, v) -> {
+                java.lang.reflect.Field field = Optional.of(tClass)
+                        .map(Class::getDeclaredFields)
+                        .stream()
+                        .flatMap(Arrays::stream)
+                        .filter(f -> Optional.of(OdooField.class)
+                                .map(f::getAnnotation)
+                                .map(OdooField::value)
+                                .orElse(f.getName()).equals(k))
+                        .findFirst()
+                        .orElseGet(Try.onSupplier(() -> tClass.getDeclaredField(k), (NoSuchFieldException e) -> null));
+
+                if (field != null) {
+                    field.setAccessible(true);
+                    field.set(instance, v);
+                }
+            }));
+
+            return Optional.of(instance);
+        } catch (Exception e) {
+            return Optional.empty();
         }
     }
 }
