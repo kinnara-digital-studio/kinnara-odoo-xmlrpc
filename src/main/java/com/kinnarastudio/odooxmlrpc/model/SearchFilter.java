@@ -72,6 +72,15 @@ public class SearchFilter {
         public String toString() {
             return symbol;
         }
+
+        public static Operator parse(String value) {
+            for (Operator op : values()) {
+                if (op.symbol.equalsIgnoreCase(value)) {
+                    return op;
+                }
+            }
+            throw new IllegalArgumentException("No operator with symbol " + value + " found");
+        }
     }
 
     /**
@@ -90,6 +99,15 @@ public class SearchFilter {
         @Override
         public String toString() {
             return symbol;
+        }
+
+        public static Join parse(String value) {
+            for (Join join : values()) {
+                if (join.symbol.equalsIgnoreCase(value)) {
+                    return join;
+                }
+            }
+            throw new IllegalArgumentException("No join operator with symbol " + value + " found");
         }
     }
 
