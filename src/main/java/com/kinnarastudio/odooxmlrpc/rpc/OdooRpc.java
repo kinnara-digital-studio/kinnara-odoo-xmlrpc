@@ -64,6 +64,8 @@ public class OdooRpc {
      * <p>
      * Implementation of odoo's xmlrpc <b>fields_get()</b> method
      *
+     * Retrieve fields on the model
+     *
      * @param model
      * @return
      * @throws OdooCallMethodException
@@ -97,6 +99,9 @@ public class OdooRpc {
     }
 
     /**
+     * Fields Get
+     *
+     * Retrieve fields on the model
      *
      * @param tClass
      * @return

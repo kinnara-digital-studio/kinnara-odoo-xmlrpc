@@ -67,12 +67,12 @@ public class OdooTest {
 
 //        SearchFilter[] filters = SearchFilter.single("movement_id", 9);
         SearchFilter[] filters = new SearchFilter[] {
-                new SearchFilter( "id", 107),
-                new SearchFilter(SearchFilter.Join.OR, "id", 108),
-                new SearchFilter(SearchFilter.Join.OR, "id", 71),
-                new SearchFilter( "name", SearchFilter.Operator.ILIKE, "BOX")
+//                new SearchFilter( "id", 107),
+//                new SearchFilter(SearchFilter.Join.OR, "id", 108),
+//                new SearchFilter(SearchFilter.Join.OR, "id", 71),
+                new SearchFilter( "uom_category_id", SearchFilter.Operator.NOT_EQUAL, null)
         };
-        for (ProductTemplate record : rpc.searchRead(ProductTemplate.class, filters, null, null, null)) {
+        for (Map<String, Object> record : rpc.searchRead("product.template", filters, null, null, null)) {
             System.out.println(record.toString());
         }
     }
