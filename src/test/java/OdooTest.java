@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class OdooTest {
     public final static String PROPERTIES_FILE = "test.properties";
@@ -48,11 +49,11 @@ public class OdooTest {
         String model = "product.template";
 
 //        SearchFilter[] filters = SearchFilter.single("movement_id", 9);
-        SearchFilter[] filters = new SearchFilter[] {
-                new SearchFilter( "id", 107),
+        SearchFilter[] filters = new SearchFilter[]{
+                new SearchFilter("id", 107),
                 new SearchFilter(SearchFilter.Join.OR, "id", 108),
                 new SearchFilter(SearchFilter.Join.OR, "id", 71),
-                new SearchFilter( "name", SearchFilter.Operator.ILIKE, "BOX")
+                new SearchFilter("name", SearchFilter.Operator.ILIKE, "BOX")
         };
         for (Map<String, Object> record : rpc.searchRead(model, filters, null, null, null)) {
             System.out.println(record.entrySet().stream().map(e -> e.getKey() + "->" + e.getValue()).collect(Collectors.joining(" | ")));
@@ -66,11 +67,11 @@ public class OdooTest {
         final Collection<Integer> records = new HashSet<>();
 
 //        SearchFilter[] filters = SearchFilter.single("movement_id", 9);
-        SearchFilter[] filters = new SearchFilter[] {
+        SearchFilter[] filters = new SearchFilter[]{
 //                new SearchFilter( "id", 107),
 //                new SearchFilter(SearchFilter.Join.OR, "id", 108),
 //                new SearchFilter(SearchFilter.Join.OR, "id", 71),
-                new SearchFilter( "uom_category_id", SearchFilter.Operator.NOT_EQUAL, null)
+                new SearchFilter("uom_category_id", SearchFilter.Operator.NOT_EQUAL, null)
         };
         for (Map<String, Object> record : rpc.searchRead("product.template", filters, null, null, null)) {
             System.out.println(record.toString());
@@ -104,7 +105,7 @@ public class OdooTest {
     @Test
     public void testWrite() throws OdooCallMethodException {
         String model = "stock.movements";
-        SearchFilter[] filter = new SearchFilter[] {
+        SearchFilter[] filter = new SearchFilter[]{
                 new SearchFilter("name", "PB00010")
         };
         int recordId = rpc.search(model, filter, null, null, 4)[0];
@@ -159,6 +160,54 @@ public class OdooTest {
     @Test
     public void testBus() throws OdooCallMethodException {
         int messageId = rpc.messagePost("purchase.order", 54, "Sending from kecak [" + new Date() + "]");
+    }
+
+    @Test
+    public void testCreatePricelist() throws OdooCallMethodException {
+
+        String model = "product.pricelist";
+        final Map<String, Object> record = new HashMap<>() {{
+            put("pricelist_id", 35);
+            put("product_tmpl_id", 17968);
+            put("compute_price", "fixed");
+            put("fixed_price", 75);
+            put("min_qty_uom", 19);
+            put("uom_id", 5759);
+        }};
+
+        int recordId = rpc.create(model, record);
+
+        System.out.println(recordId);
+    }
+
+    @org.junit.Test
+    public void testCreateProductTemplate() throws OdooCallMethodException {
+
+        String model = "product.template";
+        final Map<String, Object> record = new HashMap<>() {
+            {
+                put("name", "Testing Product Hqhr");
+                put("customer_id", 1416);
+                put("categ_id", 595);
+                put("list_price", 1.0);
+                put("size_fw", 80);
+                put("size_sw", 0.0);
+                put("size_pitch", 190);
+                put("spec_length", 1000);
+                put("spec_thickness", 35);
+                put("material_film_id", 6750);
+                put("uom_id", 1);
+                put("uom_po_id", 27);
+                put("purchase_line_warn", "no-message");
+                put("sale_line_warn", "no-message");
+                put("tracking", "none");
+                put("detailed_type", "product");
+            }
+        };
+
+        int recordId = rpc.create(model, record, record);
+
+        System.out.println(recordId);
     }
 
     @Test

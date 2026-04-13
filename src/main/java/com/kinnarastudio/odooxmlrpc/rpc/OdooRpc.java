@@ -342,12 +342,12 @@ public class OdooRpc {
      * Implementation of odoo's xmlrpc <b>create()</b>
      *
      * @param model
-     * @param row
+     * @param records
      * @return
      * @throws OdooCallMethodException
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#create-records">Create records</a>
      */
-    public int create(String model, Map<String, Object> row) throws OdooCallMethodException {
+    public int create(String model, Map<String, Object>... records) throws OdooCallMethodException {
         try {
             final int uid = login();
 
@@ -357,7 +357,7 @@ public class OdooRpc {
                     apiKey,
                     model,
                     "create",
-                    new Object[]{row},
+                    records
             };
 
             return (int) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
