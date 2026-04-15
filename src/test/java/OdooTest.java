@@ -128,7 +128,7 @@ public class OdooTest {
             put("stop_datetime", "2025-09-12T09:00:00+07:00");
         }};
 
-        int recordId = rpc.create(model, record);
+        int recordId = rpc.create(model, new Object[] {record});
 
         System.out.println(recordId);
     }
@@ -167,12 +167,10 @@ public class OdooTest {
 
         String model = "product.pricelist";
         final Map<String, Object> record = new HashMap<>() {{
-            put("pricelist_id", 35);
-            put("product_tmpl_id", 17968);
-            put("compute_price", "fixed");
-            put("fixed_price", 75);
-            put("min_qty_uom", 19);
-            put("uom_id", 5759);
+            put("name", "Test");
+            put("currency_id", 1);
+            put("partner_id", 879);
+            put("company_id", false);
         }};
 
         int recordId = rpc.create(model, record);
@@ -205,7 +203,7 @@ public class OdooTest {
             }
         };
 
-        int recordId = rpc.create(model, record, record);
+        int recordId = rpc.create(model, new Object[] {record});
 
         System.out.println(recordId);
     }

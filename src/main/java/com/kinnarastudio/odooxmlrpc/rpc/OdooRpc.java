@@ -63,7 +63,7 @@ public class OdooRpc {
      * Fields Get
      * <p>
      * Implementation of odoo's xmlrpc <b>fields_get()</b> method
-     *
+     * <p>
      * Retrieve fields on the model
      *
      * @param model
@@ -100,7 +100,7 @@ public class OdooRpc {
 
     /**
      * Fields Get
-     *
+     * <p>
      * Retrieve fields on the model
      *
      * @param tClass
@@ -342,12 +342,12 @@ public class OdooRpc {
      * Implementation of odoo's xmlrpc <b>create()</b>
      *
      * @param model
-     * @param records
+     * @param vals
      * @return
      * @throws OdooCallMethodException
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#create-records">Create records</a>
      */
-    public int create(String model, Map<String, Object>... records) throws OdooCallMethodException {
+    public int create(String model, Object... vals) throws OdooCallMethodException {
         try {
             final int uid = login();
 
@@ -357,7 +357,7 @@ public class OdooRpc {
                     apiKey,
                     model,
                     "create",
-                    records
+                    vals
             };
 
             return (int) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
@@ -376,7 +376,7 @@ public class OdooRpc {
     public int create(Object row) throws OdooCallMethodException {
         String model = getModel(row.getClass());
         Map<String, Object> map = getRowMap(row);
-        return create(model, map);
+        return create(model, new Object[]{map});
     }
 
     /**
