@@ -5,7 +5,7 @@ public enum DataType {
     INTEGER;
 
     public static DataType parse(String string) {
-        switch (string) {
+        switch (string.toLowerCase()) {
             case "integer":
             case "many2one":
                 return DataType.INTEGER;

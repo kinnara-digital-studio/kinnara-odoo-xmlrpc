@@ -11,6 +11,7 @@ import com.kinnarastudio.odooxmlrpc.model.SearchFilter;
 import org.apache.xmlrpc.XmlRpcException;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.net.MalformedURLException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -86,6 +87,7 @@ public class OdooRpc {
             };
 
             final Object ret = XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
+
             return Optional.ofNullable((Map<String, Map<String, Object>>) ret)
                     .map(Map::entrySet)
                     .stream()
@@ -342,12 +344,12 @@ public class OdooRpc {
      * Implementation of odoo's xmlrpc <b>create()</b>
      *
      * @param model
-     * @param vals
+     * @param record
      * @return
      * @throws OdooCallMethodException
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#create-records">Create records</a>
      */
-    public int create(String model, Object... vals) throws OdooCallMethodException {
+    public int create(String model, Map<String, Object> record) throws OdooCallMethodException {
         try {
             final int uid = login();
 
@@ -357,7 +359,7 @@ public class OdooRpc {
                     apiKey,
                     model,
                     "create",
-                    vals
+                    new Object[]{record}
             };
 
             return (int) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
@@ -369,14 +371,14 @@ public class OdooRpc {
 
     /**
      *
-     * @param row
+     * @param record
      * @return
      * @throws OdooCallMethodException
      */
-    public int create(Object row) throws OdooCallMethodException {
-        String model = getModel(row.getClass());
-        Map<String, Object> map = getRowMap(row);
-        return create(model, new Object[]{map});
+    public <T> int create(T record) throws OdooCallMethodException {
+        String model = getModel(record.getClass());
+        Map<String, Object> map = getRowMap(record);
+        return create(model, map);
     }
 
     /**
@@ -386,11 +388,11 @@ public class OdooRpc {
      *
      * @param model
      * @param recordId
-     * @param row
+     * @param record
      * @throws OdooCallMethodException
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#update-records">Update records</a>
      */
-    public void write(String model, int recordId, Map<String, Object> row) throws OdooCallMethodException {
+    public void write(String model, int recordId, Map<String, Object> record) throws OdooCallMethodException {
         try {
             final int uid = login();
 
@@ -400,7 +402,7 @@ public class OdooRpc {
                     apiKey,
                     model,
                     "write",
-                    new Object[]{recordId, row},
+                    new Object[]{recordId, record},
             };
 
             XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
@@ -413,12 +415,12 @@ public class OdooRpc {
     /**
      *
      * @param recordId
-     * @param row
+     * @param record
      * @throws OdooCallMethodException
      */
-    public void write(int recordId, Object row) throws OdooCallMethodException {
-        String model = getModel(row.getClass());
-        Map<String, Object> map = getRowMap(row);
+    public <T> void write(int recordId, T record) throws OdooCallMethodException {
+        String model = getModel(record.getClass());
+        Map<String, Object> map = getRowMap(record);
         write(model, recordId, map);
     }
 
@@ -513,17 +515,18 @@ public class OdooRpc {
         }
     }
 
-    protected String getModel(Class<?> clazz) {
-        return Optional.of(clazz)
+    protected String getModel(Class<?> tClass) throws OdooCallMethodException {
+        return Optional.of(tClass)
                 .map(c -> c.getAnnotation(OdooModel.class))
                 .map(OdooModel::value)
-                .orElseThrow(() -> new IllegalArgumentException("Class [" + clazz.getName() + "] is not annotated with @OdooModel"));
+                .orElseThrow(() -> new OdooCallMethodException("Class [" + tClass.getName() + "] is not annotated with @OdooModel"));
     }
 
-    protected Map<String, Object> getRowMap(Object row) {
+    protected <T> Map<String, Object> getRowMap(T record) {
+
         Map<String, Object> map = new HashMap<>();
 
-        Optional.ofNullable(row)
+        Optional.ofNullable(record)
                 .map(Object::getClass)
                 .map(Class::getDeclaredFields)
                 .stream()
@@ -534,7 +537,7 @@ public class OdooRpc {
                             .map(f::getAnnotation)
                             .map(OdooField::value)
                             .orElse(f.getName());
-                    Object value = f.get(row);
+                    Object value = f.get(record);
                     map.put(key, value);
                 }, (Exception e) -> {
                 }));
@@ -546,23 +549,24 @@ public class OdooRpc {
         try {
             T instance = tClass.getDeclaredConstructor().newInstance();
 
-            record.forEach(Try.onBiConsumer((k, v) -> {
-                java.lang.reflect.Field field = Optional.of(tClass)
-                        .map(Class::getDeclaredFields)
-                        .stream()
-                        .flatMap(Arrays::stream)
-                        .filter(f -> Optional.of(OdooField.class)
-                                .map(f::getAnnotation)
-                                .map(OdooField::value)
-                                .orElse(f.getName()).equals(k))
-                        .findFirst()
-                        .orElseGet(Try.onSupplier(() -> tClass.getDeclaredField(k), (NoSuchFieldException e) -> null));
+            Optional.of(tClass)
+                    .map(Class::getDeclaredFields)
+                    .stream()
+                    .flatMap(Arrays::stream)
+                    .forEach(Try.onConsumer(field -> {
+                        field.setAccessible(true);
 
-                if (field != null) {
-                    field.setAccessible(true);
-                    field.set(instance, v);
-                }
-            }));
+                        // get fieldname from either annotation or field declaration
+                        String fieldName = Optional.of(OdooField.class)
+                                .map(field::getAnnotation)
+                                .map(OdooField::value)
+                                .orElseGet(field::getName);
+
+                        if(record.containsValue(fieldName)) {
+                            Object value = record.get(fieldName);
+                            field.set(instance, value);
+                        }
+                    }));
 
             return Optional.of(instance);
         } catch (Exception e) {

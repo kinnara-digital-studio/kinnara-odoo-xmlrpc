@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class OdooTest {
     public final static String PROPERTIES_FILE = "test.properties";
@@ -128,7 +127,7 @@ public class OdooTest {
             put("stop_datetime", "2025-09-12T09:00:00+07:00");
         }};
 
-        int recordId = rpc.create(model, new Object[] {record});
+        int recordId = rpc.create(model, record);
 
         System.out.println(recordId);
     }
@@ -182,28 +181,26 @@ public class OdooTest {
     public void testCreateProductTemplate() throws OdooCallMethodException {
 
         String model = "product.template";
-        final Map<String, Object> record = new HashMap<>() {
-            {
-                put("name", "Testing Product Hqhr");
-                put("customer_id", 1416);
-                put("categ_id", 595);
-                put("list_price", 1.0);
-                put("size_fw", 80);
-                put("size_sw", 0.0);
-                put("size_pitch", 190);
-                put("spec_length", 1000);
-                put("spec_thickness", 35);
-                put("material_film_id", 6750);
-                put("uom_id", 1);
-                put("uom_po_id", 27);
-                put("purchase_line_warn", "no-message");
-                put("sale_line_warn", "no-message");
-                put("tracking", "none");
-                put("detailed_type", "product");
-            }
-        };
+        final Map<String, Object> record = new HashMap<>() {{
+            put("name", "Testing Product Hqhr");
+            put("customer_id", 1416);
+            put("categ_id", 595);
+            put("list_price", 1.0);
+            put("size_fw", 80);
+            put("size_sw", 0.0);
+            put("size_pitch", 190);
+            put("spec_length", 1000);
+            put("spec_thickness", 35);
+            put("material_film_id", 6750);
+            put("uom_id", 1);
+            put("uom_po_id", 27);
+            put("purchase_line_warn", "no-message");
+            put("sale_line_warn", "no-message");
+            put("tracking", "none");
+            put("detailed_type", "product");
+        }};
 
-        int recordId = rpc.create(model, new Object[] {record});
+        int recordId = rpc.create(model, new Object[]{record});
 
         System.out.println(recordId);
     }
@@ -221,6 +218,35 @@ public class OdooTest {
         }
     }
 
+
+    @Test
+    public void searchPurchaseRequest() {
+        try {
+            String model = "purchase.request";
+            SearchFilter[] filters = new SearchFilter[]{
+                    new SearchFilter("id", 73)
+            };
+            for (Map<String, Object> record : rpc.searchRead(model, filters, null, null, null)) {
+                System.out.println(record.entrySet().stream().map(e -> e.getKey() + "->" + e.getValue()).collect(Collectors.joining(" | ")));
+            }
+        } catch (OdooCallMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    public void rejectPurchaseRequest() {
+        try {
+            String model = "purchase.request";
+
+            rpc.write(model, 73, new HashMap<>() {{
+                put("status", "rejected");
+            }});
+
+        } catch (OdooCallMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     /**
      * Baca dari DB
