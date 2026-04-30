@@ -3,6 +3,7 @@ import com.kinnarastudio.odooxmlrpc.exception.OdooCallMethodException;
 import com.kinnarastudio.odooxmlrpc.model.Field;
 import com.kinnarastudio.odooxmlrpc.model.SearchFilter;
 import com.kinnarastudio.odooxmlrpc.rpc.OdooRpc;
+import com.kinnarastudio.odooxmlrpc.rpc.SynchronizedOdooRpc;
 import com.kinnarastudio.odooxmlrpc.rpc.XmlRpcUtil;
 import model.ProductTemplate;
 import org.junit.Test;
@@ -23,14 +24,14 @@ public class OdooTest {
 
     private final OdooRpc rpc;
 
-    public OdooTest() {
+    public OdooTest() throws OdooAuthorizationException {
         final Properties properties = getProperties(PROPERTIES_FILE);
         baseUrl = properties.get("baseUrl").toString();
         database = properties.get("database").toString();
         user = properties.get("user").toString();
         apiKey = properties.get("apiKey").toString();
 
-        rpc = new OdooRpc(baseUrl, database, user, apiKey);
+        rpc = new SynchronizedOdooRpc(baseUrl, database, user, apiKey);
     }
 
     @Test
@@ -41,7 +42,7 @@ public class OdooTest {
     }
 
     @Test
-    public void testSearch() throws OdooCallMethodException {
+    public void testSearch() throws OdooCallMethodException, OdooAuthorizationException {
         final OdooRpc rpc = new OdooRpc(baseUrl, database, user, apiKey);
 
         final Collection<Integer> records = new HashSet<>();
@@ -60,7 +61,7 @@ public class OdooTest {
     }
 
     @Test
-    public void testSearchWithClass() throws OdooCallMethodException {
+    public void testSearchWithClass() throws OdooCallMethodException, OdooAuthorizationException {
         final OdooRpc rpc = new OdooRpc(baseUrl, database, user, apiKey);
 
         final Collection<Integer> records = new HashSet<>();
@@ -200,7 +201,7 @@ public class OdooTest {
             put("detailed_type", "product");
         }};
 
-        int recordId = rpc.create(model, new Object[]{record});
+        int recordId = rpc.create(model, record);
 
         System.out.println(recordId);
     }

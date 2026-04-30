@@ -45,6 +45,22 @@ public class SearchFilter {
         return join;
     }
 
+    public static SearchFilter[] eq(String field, Object value) {
+        return new SearchFilter[] {new SearchFilter(field, Operator.EQUAL, value)};
+    }
+
+    public static SearchFilter[] ne(String field, Object value) {
+        return new SearchFilter[]{new SearchFilter(field, Operator.NOT_EQUAL, value)};
+    }
+
+    public static SearchFilter[] in(String field, Object... values) {
+        return new SearchFilter[]{new SearchFilter(field, Operator.IN, values)};
+    }
+
+    public static SearchFilter[] nin(String field, Object... values) {
+        return new SearchFilter[]{new SearchFilter(field, Operator.NOT_IN, values)};
+    }
+
     /**
      * Operator enumeration
      */

@@ -11,7 +11,6 @@ import com.kinnarastudio.odooxmlrpc.model.SearchFilter;
 import org.apache.xmlrpc.XmlRpcException;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.net.MalformedURLException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -28,12 +27,14 @@ public class OdooRpc {
     private final String database;
     private final String user;
     private final String apiKey;
+    private final int uid;
 
-    public OdooRpc(String baseUrl, String database, String user, String apiKey) {
+    public OdooRpc(String baseUrl, String database, String user, String apiKey) throws OdooAuthorizationException {
         this.baseUrl = baseUrl;
         this.database = database;
         this.user = user;
         this.apiKey = apiKey;
+        this.uid = login();
     }
 
     /**
@@ -75,8 +76,6 @@ public class OdooRpc {
     @Nonnull
     public Collection<Field> fieldsGet(String model) throws OdooCallMethodException {
         try {
-            final int uid = login();
-
             final Object[] params = new Object[]{
                     database,
                     uid,
@@ -95,7 +94,7 @@ public class OdooRpc {
                     .map(e -> new Field(e.getKey(), e.getValue()))
                     .collect(Collectors.toSet());
 
-        } catch (MalformedURLException | XmlRpcException | OdooAuthorizationException e) {
+        } catch (MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
         }
     }
@@ -151,8 +150,6 @@ public class OdooRpc {
     @Nonnull
     public Integer[] search(String model, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         try {
-            final int uid = login();
-
             final Object[] objectFilters = XmlRpcUtil.prefixation(filters);
 
             final Object[] params = new Object[]{
@@ -173,9 +170,13 @@ public class OdooRpc {
                     .map(o -> (Integer) o)
                     .toArray(Integer[]::new);
 
-        } catch (MalformedURLException | XmlRpcException | OdooAuthorizationException e) {
+        } catch (MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
         }
+    }
+
+    public Map<String, Object>[] searchRead(String model, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
+        return searchRead(model, null, filters, order, offset, limit);
     }
 
     /**
@@ -193,10 +194,8 @@ public class OdooRpc {
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#search-and-read">Search and Read</a>
      */
     @Nonnull
-    public Map<String, Object>[] searchRead(String model, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
+    public Map<String, Object>[] searchRead(String model, String[] fields, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         try {
-            final int uid = login();
-
             final Object[] objectFilters = XmlRpcUtil.prefixation(filters);
 
             final Object[] params = new Object[]{
@@ -207,6 +206,7 @@ public class OdooRpc {
                     "search_read",
                     new Object[]{objectFilters},
                     new HashMap<String, Object>() {{
+                        if (fields != null && fields.length > 0) put("fields", fields);
                         if (offset != null) put("offset", offset);
                         if (limit != null) put("limit", limit);
                         if (order != null) put("order", order);
@@ -220,7 +220,7 @@ public class OdooRpc {
                     }))
                     .toArray(Map[]::new);
 
-        } catch (MalformedURLException | XmlRpcException | OdooAuthorizationException e) {
+        } catch (MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
         }
     }
@@ -241,7 +241,8 @@ public class OdooRpc {
      */
     public <T> T[] searchRead(Class<T> tClass, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         String model = getModel(tClass);
-        Map<String, Object>[] records = searchRead(model, filters, order, offset, limit);
+        String[] fields = getFields(tClass);
+        Map<String, Object>[] records = searchRead(model, fields, filters, order, offset, limit);
 
         return Arrays.stream(records)
                 .map(m -> parseRecord(tClass, m))
@@ -263,8 +264,6 @@ public class OdooRpc {
      */
     public int searchCount(String model, SearchFilter[] filters) throws OdooCallMethodException {
         try {
-            final int uid = login();
-
             final Object[] objectFilters = XmlRpcUtil.prefixation(filters);
 
             final Object[] params = new Object[]{
@@ -279,7 +278,7 @@ public class OdooRpc {
             return Optional.ofNullable((int) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params))
                     .orElse(0);
 
-        } catch (MalformedURLException | XmlRpcException | OdooAuthorizationException e) {
+        } catch (MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
         }
     }
@@ -303,8 +302,6 @@ public class OdooRpc {
      */
     public Optional<Map<String, Object>> read(String model, int recordId) throws OdooCallMethodException {
         try {
-            final int uid = login();
-
             final Object[] params = new Object[]{
                     database,
                     uid,
@@ -321,7 +318,7 @@ public class OdooRpc {
                         if (value instanceof Boolean && !(boolean) value) m.replace(key, null);
                     })));
 
-        } catch (MalformedURLException | XmlRpcException | OdooAuthorizationException e) {
+        } catch (MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
         }
     }
@@ -351,8 +348,6 @@ public class OdooRpc {
      */
     public int create(String model, Map<String, Object> record) throws OdooCallMethodException {
         try {
-            final int uid = login();
-
             final Object[] params = new Object[]{
                     database,
                     uid,
@@ -364,7 +359,7 @@ public class OdooRpc {
 
             return (int) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
 
-        } catch (MalformedURLException | XmlRpcException | OdooAuthorizationException e) {
+        } catch (MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
         }
     }
@@ -394,8 +389,6 @@ public class OdooRpc {
      */
     public void write(String model, int recordId, Map<String, Object> record) throws OdooCallMethodException {
         try {
-            final int uid = login();
-
             final Object[] params = new Object[]{
                     database,
                     uid,
@@ -407,7 +400,7 @@ public class OdooRpc {
 
             XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
 
-        } catch (MalformedURLException | XmlRpcException | OdooAuthorizationException e) {
+        } catch (MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
         }
     }
@@ -437,8 +430,6 @@ public class OdooRpc {
      */
     public void unlink(String model, int recordId) throws OdooCallMethodException {
         try {
-            final int uid = login();
-
             final Object[] params = new Object[]{
                     database,
                     uid,
@@ -450,7 +441,7 @@ public class OdooRpc {
 
             XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
 
-        } catch (MalformedURLException | XmlRpcException | OdooAuthorizationException e) {
+        } catch (MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
         }
     }
@@ -494,7 +485,6 @@ public class OdooRpc {
      */
     public int messagePost(String model, int[] recordIds, MessageType messageType, String body) throws OdooCallMethodException {
         try {
-            final int uid = login();
             final Object[] params = new Object[]{
                     database,
                     uid,
@@ -510,7 +500,7 @@ public class OdooRpc {
             };
 
             return (int) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
-        } catch (OdooAuthorizationException | MalformedURLException | XmlRpcException e) {
+        } catch (MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
         }
     }
@@ -520,6 +510,18 @@ public class OdooRpc {
                 .map(c -> c.getAnnotation(OdooModel.class))
                 .map(OdooModel::value)
                 .orElseThrow(() -> new OdooCallMethodException("Class [" + tClass.getName() + "] is not annotated with @OdooModel"));
+    }
+
+    protected String[] getFields(Class<?> tClass) {
+        return Optional.of(tClass)
+                .map(Class::getDeclaredFields)
+                .stream()
+                .flatMap(Arrays::stream)
+                .map(f -> Optional.of(OdooField.class)
+                        .map(f::getAnnotation)
+                        .map(OdooField::value)
+                        .orElse(f.getName()))
+                .toArray(String[]::new);
     }
 
     protected <T> Map<String, Object> getRowMap(T record) {
@@ -562,7 +564,7 @@ public class OdooRpc {
                                 .map(OdooField::value)
                                 .orElseGet(field::getName);
 
-                        if(record.containsValue(fieldName)) {
+                        if (record.containsValue(fieldName)) {
                             Object value = record.get(fieldName);
                             field.set(instance, value);
                         }
