@@ -1,19 +1,14 @@
 package com.kinnarastudio.odooxmlrpc.rpc;
 
-import com.kinnarastudio.commons.Try;
-import com.kinnarastudio.odooxmlrpc.annotation.OdooField;
-import com.kinnarastudio.odooxmlrpc.annotation.OdooModel;
 import com.kinnarastudio.odooxmlrpc.exception.OdooAuthorizationException;
 import com.kinnarastudio.odooxmlrpc.exception.OdooCallMethodException;
 import com.kinnarastudio.odooxmlrpc.model.Field;
 import com.kinnarastudio.odooxmlrpc.model.MessageType;
 import com.kinnarastudio.odooxmlrpc.model.SearchFilter;
-import org.apache.xmlrpc.XmlRpcException;
 
 import javax.annotation.Nonnull;
-import java.net.MalformedURLException;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * Odoo RPC
@@ -64,42 +59,6 @@ public class SynchronizedOdooRpc extends OdooRpc {
     }
 
     /**
-     * Fields Get
-     * <p>
-     * Retrieve fields on the model
-     *
-     * @param tClass
-     * @return
-     * @throws OdooCallMethodException
-     */
-    @Override
-    public Collection<Field> fieldsGet(Class<?> tClass) throws OdooCallMethodException {
-        String model = getModel(tClass);
-        return fieldsGet(model);
-    }
-
-    /**
-     * Search
-     * <p>
-     * Implementation of odoo's xmlrpc <b>search()</b> method
-     *
-     * @param tClass
-     * @param filters
-     * @param order
-     * @param offset
-     * @param limit
-     * @param <T>
-     * @return
-     * @throws OdooCallMethodException
-     */
-    @Override
-    public <T> Integer[] search(Class<T> tClass, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
-        String model = getModel(tClass);
-        return search(model, filters, order, offset, limit);
-    }
-
-
-    /**
      * Search
      * <p>
      * Implementation of odoo's xmlrpc <b>search()</b> method
@@ -119,21 +78,6 @@ public class SynchronizedOdooRpc extends OdooRpc {
         synchronized (lock) {
             return super.search(model, filters, order, offset, limit);
         }
-    }
-
-    /**
-     *
-     * @param model
-     * @param filters
-     * @param order
-     * @param offset
-     * @param limit
-     * @return
-     * @throws OdooCallMethodException
-     */
-    @Override
-    public Map<String, Object>[] searchRead(String model, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
-        return searchRead(model, null, filters, order, offset, limit);
     }
 
     /**
@@ -159,27 +103,6 @@ public class SynchronizedOdooRpc extends OdooRpc {
     }
 
     /**
-     * Search Read
-     * <p>
-     * Implementation of odoo's xmlrpc <b>search_read()</b> method
-     *
-     * @param tClass
-     * @param filters
-     * @param order
-     * @param offset
-     * @param limit
-     * @param <T>
-     * @return
-     * @throws OdooCallMethodException
-     */
-    @Override
-    public <T> T[] searchRead(Class<T> tClass, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
-        synchronized (lock) {
-            return super.searchRead(tClass, filters, order, offset, limit);
-        }
-    }
-
-    /**
      * Search Count
      * <p>
      * Implementation of odoo's xmlrpc <b>search_count()</b>
@@ -195,44 +118,6 @@ public class SynchronizedOdooRpc extends OdooRpc {
         synchronized (lock) {
             return super.searchCount(model, filters);
         }
-    }
-
-    @Override
-    public int searchCount(Class<?> tClazz, SearchFilter[] filters) throws OdooCallMethodException {
-        String model = getModel(tClazz);
-        return searchCount(model, filters);
-    }
-
-
-    /**
-     * Read
-     * <p>
-     * Implementation of odoo's xmlrpc <b>read()</b>
-     *
-     * @param model
-     * @param recordId
-     * @return
-     * @throws OdooCallMethodException
-     * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#read-records">Read records</a>
-     */
-    @Override
-    public Optional<Map<String, Object>> read(String model, int recordId) throws OdooCallMethodException {
-        synchronized (lock) {
-            return super.read(model, recordId);
-        }
-    }
-
-    /**
-     *
-     * @param tClass
-     * @param recordId
-     * @return
-     * @throws OdooCallMethodException
-     */
-    @Override
-    public Optional<Map<String, Object>> read(Class<?> tClass, int recordId) throws OdooCallMethodException {
-        String model = getModel(tClass);
-        return read(model, recordId);
     }
 
     /**
@@ -254,19 +139,6 @@ public class SynchronizedOdooRpc extends OdooRpc {
     }
 
     /**
-     *
-     * @param record
-     * @return
-     * @throws OdooCallMethodException
-     */
-    @Override
-    public <T> int create(T record) throws OdooCallMethodException {
-        String model = getModel(record.getClass());
-        Map<String, Object> map = getRowMap(record);
-        return create(model, map);
-    }
-
-    /**
      * Write
      * <p>
      * Implementation of odoo's xmlrpc <b>write()</b>
@@ -285,20 +157,6 @@ public class SynchronizedOdooRpc extends OdooRpc {
     }
 
     /**
-     *
-     * @param recordId
-     * @param record
-     * @throws OdooCallMethodException
-     */
-    @Override
-    public <T> void write(int recordId, T record) throws OdooCallMethodException {
-        String model = getModel(record.getClass());
-        Map<String, Object> map = getRowMap(record);
-        write(model, recordId, map);
-    }
-
-
-    /**
      * Unlink
      * <p>
      * Implementation of odoo's xmlrpc <b>unlink()</b>
@@ -313,37 +171,6 @@ public class SynchronizedOdooRpc extends OdooRpc {
         synchronized (lock) {
             super.unlink(model, recordId);
         }
-    }
-
-    @Override
-    public void unlink(Class<?> tClass, int recordId) throws OdooCallMethodException {
-        String model = getModel(tClass);
-        unlink(model, recordId);
-    }
-
-    /**
-     *
-     * @param model
-     * @param recordId
-     * @param body
-     */
-    @Override
-    public int messagePost(String model, int recordId, String body) throws OdooCallMethodException {
-        return messagePost(model, new int[]{recordId}, MessageType.COMMENT, body);
-    }
-
-    /**
-     *
-     * @param tClass
-     * @param recordId
-     * @param body
-     * @return
-     * @throws OdooCallMethodException
-     */
-    @Override
-    public int messagePost(Class<?> tClass, int recordId, String body) throws OdooCallMethodException {
-        String model = getModel(tClass);
-        return messagePost(model, new int[]{recordId}, MessageType.COMMENT, body);
     }
 
     /**

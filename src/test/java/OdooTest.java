@@ -91,6 +91,15 @@ public class OdooTest {
     }
 
     @Test
+    public void testSearchRead() throws OdooCallMethodException {
+        String model = "hr.employee";
+        String[] fields = new String[]{"id", "name", "barcode"};
+        SearchFilter[] filter = null;
+        Map<String, Object>[] records = rpc.searchRead(model, filter, null, null, null);
+        Arrays.stream(records).forEach((m) -> System.out.println(m));
+    }
+
+    @Test
     public void testFieldsGet() throws OdooCallMethodException {
         final Collection<Field> fields = rpc.fieldsGet(ProductTemplate.class);
 

@@ -290,6 +290,30 @@ public class OdooRpc {
 
 
     /**
+     *
+     * @param tClass
+     * @param recordId
+     * @return
+     * @throws OdooCallMethodException
+     */
+    public Optional<Map<String, Object>> read(Class<?> tClass, int recordId) throws OdooCallMethodException {
+        String model = getModel(tClass);
+        String[] fields = getFields(tClass);
+        return read(model, fields, recordId);
+    }
+
+    /**
+     *
+     * @param model
+     * @param recordId
+     * @return
+     * @throws OdooCallMethodException
+     */
+    public Optional<Map<String, Object>> read(String model, int recordId) throws OdooCallMethodException {
+        return read(model, null, recordId);
+    }
+
+    /**
      * Read
      * <p>
      * Implementation of odoo's xmlrpc <b>read()</b>
@@ -300,7 +324,7 @@ public class OdooRpc {
      * @throws OdooCallMethodException
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#read-records">Read records</a>
      */
-    public Optional<Map<String, Object>> read(String model, int recordId) throws OdooCallMethodException {
+    public Optional<Map<String, Object>> read(String model, String[] fields, int recordId) throws OdooCallMethodException {
         try {
             final Object[] params = new Object[]{
                     database,
@@ -309,6 +333,9 @@ public class OdooRpc {
                     model,
                     "read",
                     new Object[]{recordId},
+                    new HashMap<String, Object>() {{
+                        if (fields != null && fields.length > 0) put("fields", fields);
+                    }}
             };
 
             return Arrays.stream((Object[]) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params))
@@ -321,18 +348,6 @@ public class OdooRpc {
         } catch (MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
         }
-    }
-
-    /**
-     *
-     * @param tClass
-     * @param recordId
-     * @return
-     * @throws OdooCallMethodException
-     */
-    public Optional<Map<String, Object>> read(Class<?> tClass, int recordId) throws OdooCallMethodException {
-        String model = getModel(tClass);
-        return read(model, recordId);
     }
 
     /**
