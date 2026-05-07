@@ -18,7 +18,7 @@ import java.util.Map;
 public class SynchronizedOdooRpc extends OdooRpc {
     private static final Object lock = new Object();
 
-    public SynchronizedOdooRpc(String baseUrl, String database, String user, String apiKey) throws OdooAuthorizationException {
+    public SynchronizedOdooRpc(@Nonnull String baseUrl, @Nonnull String database, @Nonnull String user, @Nonnull String apiKey) throws OdooAuthorizationException {
         super(baseUrl, database, user, apiKey);
     }
 
@@ -52,7 +52,7 @@ public class SynchronizedOdooRpc extends OdooRpc {
      */
     @Override
     @Nonnull
-    public Collection<Field> fieldsGet(String model) throws OdooCallMethodException {
+    public Collection<Field> fieldsGet(@Nonnull String model) throws OdooCallMethodException {
         synchronized (lock) {
             return super.fieldsGet(model);
         }
@@ -74,7 +74,7 @@ public class SynchronizedOdooRpc extends OdooRpc {
      */
     @Override
     @Nonnull
-    public Integer[] search(String model, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
+    public Integer[] search(@Nonnull String model, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         synchronized (lock) {
             return super.search(model, filters, order, offset, limit);
         }
@@ -96,7 +96,7 @@ public class SynchronizedOdooRpc extends OdooRpc {
      */
     @Override
     @Nonnull
-    public Map<String, Object>[] searchRead(String model, String[] fields, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
+    public Map<String, Object>[] searchRead(@Nonnull String model, String[] fields, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         synchronized (lock) {
             return super.searchRead(model, fields, filters, order, offset, limit);
         }
@@ -114,7 +114,7 @@ public class SynchronizedOdooRpc extends OdooRpc {
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#count-records">Count records</a>
      */
     @Override
-    public int searchCount(String model, SearchFilter[] filters) throws OdooCallMethodException {
+    public int searchCount(@Nonnull String model, SearchFilter[] filters) throws OdooCallMethodException {
         synchronized (lock) {
             return super.searchCount(model, filters);
         }
@@ -132,7 +132,7 @@ public class SynchronizedOdooRpc extends OdooRpc {
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#create-records">Create records</a>
      */
     @Override
-    public int create(String model, Map<String, Object> record) throws OdooCallMethodException {
+    public int create(@Nonnull String model, Map<String, Object> record) throws OdooCallMethodException {
         synchronized (lock) {
             return super.create(model, record);
         }
@@ -150,7 +150,7 @@ public class SynchronizedOdooRpc extends OdooRpc {
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#update-records">Update records</a>
      */
     @Override
-    public void write(String model, int recordId, Map<String, Object> record) throws OdooCallMethodException {
+    public void write(@Nonnull String model, int recordId, Map<String, Object> record) throws OdooCallMethodException {
         synchronized (lock) {
             super.write(model, recordId, record);
         }
@@ -167,7 +167,7 @@ public class SynchronizedOdooRpc extends OdooRpc {
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#delete-records">Delete records</a>
      */
     @Override
-    public void unlink(String model, int recordId) throws OdooCallMethodException {
+    public void unlink(@Nonnull String model, int recordId) throws OdooCallMethodException {
         synchronized (lock) {
             super.unlink(model, recordId);
         }
@@ -183,7 +183,7 @@ public class SynchronizedOdooRpc extends OdooRpc {
      * @throws OdooCallMethodException
      */
     @Override
-    public int messagePost(String model, int[] recordIds, MessageType messageType, String body) throws OdooCallMethodException {
+    public int messagePost(@Nonnull String model, int[] recordIds, MessageType messageType, String body) throws OdooCallMethodException {
         synchronized (lock) {
             return super.messagePost(model, recordIds, messageType, body);
         }

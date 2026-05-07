@@ -29,7 +29,7 @@ public class OdooRpc {
     private final String apiKey;
     private final int uid;
 
-    public OdooRpc(String baseUrl, String database, String user, String apiKey) throws OdooAuthorizationException {
+    public OdooRpc(@Nonnull String baseUrl, @Nonnull String database, @Nonnull String user, @Nonnull String apiKey) throws OdooAuthorizationException {
         this.baseUrl = baseUrl;
         this.database = database;
         this.user = user;
@@ -74,7 +74,7 @@ public class OdooRpc {
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#list-record-fields">List record fields</a>
      */
     @Nonnull
-    public Collection<Field> fieldsGet(String model) throws OdooCallMethodException {
+    public Collection<Field> fieldsGet(@Nonnull String model) throws OdooCallMethodException {
         try {
             final Object[] params = new Object[]{
                     database,
@@ -108,7 +108,7 @@ public class OdooRpc {
      * @return
      * @throws OdooCallMethodException
      */
-    public Collection<Field> fieldsGet(Class<?> tClass) throws OdooCallMethodException {
+    public Collection<Field> fieldsGet(@Nonnull Class<?> tClass) throws OdooCallMethodException {
         String model = getModel(tClass);
         return fieldsGet(model);
     }
@@ -127,7 +127,7 @@ public class OdooRpc {
      * @return
      * @throws OdooCallMethodException
      */
-    public <T> Integer[] search(Class<T> tClass, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
+    public <T> Integer[] search(@Nonnull Class<T> tClass, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         String model = getModel(tClass);
         return search(model, filters, order, offset, limit);
     }
@@ -148,7 +148,7 @@ public class OdooRpc {
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#list-records">List Records</a>
      */
     @Nonnull
-    public Integer[] search(String model, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
+    public Integer[] search(@Nonnull String model, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         try {
             final Object[] objectFilters = XmlRpcUtil.prefixation(filters);
 
@@ -175,7 +175,7 @@ public class OdooRpc {
         }
     }
 
-    public Map<String, Object>[] searchRead(String model, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
+    public Map<String, Object>[] searchRead(@Nonnull String model, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         return searchRead(model, null, filters, order, offset, limit);
     }
 
@@ -194,7 +194,7 @@ public class OdooRpc {
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#search-and-read">Search and Read</a>
      */
     @Nonnull
-    public Map<String, Object>[] searchRead(String model, String[] fields, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
+    public Map<String, Object>[] searchRead(@Nonnull String model, String[] fields, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         try {
             final Object[] objectFilters = XmlRpcUtil.prefixation(filters);
 
@@ -239,12 +239,13 @@ public class OdooRpc {
      * @return
      * @throws OdooCallMethodException
      */
-    public <T> T[] searchRead(Class<T> tClass, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
+    public <T> T[] searchRead(@Nonnull Class<T> tClass, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         String model = getModel(tClass);
         String[] fields = getFields(tClass);
         Map<String, Object>[] records = searchRead(model, fields, filters, order, offset, limit);
 
         return Arrays.stream(records)
+                .filter(Objects::nonNull)
                 .map(m -> parseRecord(tClass, m))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
@@ -262,7 +263,7 @@ public class OdooRpc {
      * @throws OdooCallMethodException
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#count-records">Count records</a>
      */
-    public int searchCount(String model, SearchFilter[] filters) throws OdooCallMethodException {
+    public int searchCount(@Nonnull String model, SearchFilter[] filters) throws OdooCallMethodException {
         try {
             final Object[] objectFilters = XmlRpcUtil.prefixation(filters);
 
@@ -283,7 +284,7 @@ public class OdooRpc {
         }
     }
 
-    public int searchCount(Class<?> tClazz, SearchFilter[] filters) throws OdooCallMethodException {
+    public int searchCount(@Nonnull Class<?> tClazz, SearchFilter[] filters) throws OdooCallMethodException {
         String model = getModel(tClazz);
         return searchCount(model, filters);
     }
@@ -296,7 +297,7 @@ public class OdooRpc {
      * @return
      * @throws OdooCallMethodException
      */
-    public Optional<Map<String, Object>> read(Class<?> tClass, int recordId) throws OdooCallMethodException {
+    public Optional<Map<String, Object>> read(@Nonnull Class<?> tClass, int recordId) throws OdooCallMethodException {
         String model = getModel(tClass);
         String[] fields = getFields(tClass);
         return read(model, fields, recordId);
@@ -324,7 +325,7 @@ public class OdooRpc {
      * @throws OdooCallMethodException
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#read-records">Read records</a>
      */
-    public Optional<Map<String, Object>> read(String model, String[] fields, int recordId) throws OdooCallMethodException {
+    public Optional<Map<String, Object>> read(@Nonnull String model, String[] fields, int recordId) throws OdooCallMethodException {
         try {
             final Object[] params = new Object[]{
                     database,
@@ -361,7 +362,7 @@ public class OdooRpc {
      * @throws OdooCallMethodException
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#create-records">Create records</a>
      */
-    public int create(String model, Map<String, Object> record) throws OdooCallMethodException {
+    public int create(@Nonnull String model, Map<String, Object> record) throws OdooCallMethodException {
         try {
             final Object[] params = new Object[]{
                     database,
@@ -385,7 +386,7 @@ public class OdooRpc {
      * @return
      * @throws OdooCallMethodException
      */
-    public <T> int create(T record) throws OdooCallMethodException {
+    public <T> int create(@Nonnull T record) throws OdooCallMethodException {
         String model = getModel(record.getClass());
         Map<String, Object> map = getRowMap(record);
         return create(model, map);
@@ -402,7 +403,7 @@ public class OdooRpc {
      * @throws OdooCallMethodException
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#update-records">Update records</a>
      */
-    public void write(String model, int recordId, Map<String, Object> record) throws OdooCallMethodException {
+    public void write(@Nonnull String model, int recordId, Map<String, Object> record) throws OdooCallMethodException {
         try {
             final Object[] params = new Object[]{
                     database,
@@ -426,7 +427,7 @@ public class OdooRpc {
      * @param record
      * @throws OdooCallMethodException
      */
-    public <T> void write(int recordId, T record) throws OdooCallMethodException {
+    public <T> void write(int recordId, @Nonnull T record) throws OdooCallMethodException {
         String model = getModel(record.getClass());
         Map<String, Object> map = getRowMap(record);
         write(model, recordId, map);
@@ -443,7 +444,7 @@ public class OdooRpc {
      * @throws OdooCallMethodException
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#delete-records">Delete records</a>
      */
-    public void unlink(String model, int recordId) throws OdooCallMethodException {
+    public void unlink(@Nonnull String model, int recordId) throws OdooCallMethodException {
         try {
             final Object[] params = new Object[]{
                     database,
@@ -461,7 +462,7 @@ public class OdooRpc {
         }
     }
 
-    public void unlink(Class<?> tClass, int recordId) throws OdooCallMethodException {
+    public void unlink(@Nonnull Class<?> tClass, int recordId) throws OdooCallMethodException {
         String model = getModel(tClass);
         unlink(model, recordId);
     }
@@ -472,7 +473,7 @@ public class OdooRpc {
      * @param recordId
      * @param body
      */
-    public int messagePost(String model, int recordId, String body) throws OdooCallMethodException {
+    public int messagePost(@Nonnull String model, int recordId, String body) throws OdooCallMethodException {
         return messagePost(model, new int[]{recordId}, MessageType.COMMENT, body);
     }
 
@@ -484,7 +485,7 @@ public class OdooRpc {
      * @return
      * @throws OdooCallMethodException
      */
-    public int messagePost(Class<?> tClass, int recordId, String body) throws OdooCallMethodException {
+    public int messagePost(@Nonnull Class<?> tClass, int recordId, String body) throws OdooCallMethodException {
         String model = getModel(tClass);
         return messagePost(model, new int[]{recordId}, MessageType.COMMENT, body);
     }
@@ -498,7 +499,7 @@ public class OdooRpc {
      * @return
      * @throws OdooCallMethodException
      */
-    public int messagePost(String model, int[] recordIds, MessageType messageType, String body) throws OdooCallMethodException {
+    public int messagePost(@Nonnull String model, int[] recordIds, MessageType messageType, String body) throws OdooCallMethodException {
         try {
             final Object[] params = new Object[]{
                     database,
@@ -520,14 +521,16 @@ public class OdooRpc {
         }
     }
 
-    protected String getModel(Class<?> tClass) throws OdooCallMethodException {
+    @Nonnull
+    protected String getModel(@Nonnull Class<?> tClass) throws OdooCallMethodException {
         return Optional.of(tClass)
                 .map(c -> c.getAnnotation(OdooModel.class))
                 .map(OdooModel::value)
                 .orElseThrow(() -> new OdooCallMethodException("Class [" + tClass.getName() + "] is not annotated with @OdooModel"));
     }
 
-    protected String[] getFields(Class<?> tClass) {
+    @Nonnull
+    protected String[] getFields(@Nonnull Class<?> tClass) {
         return Optional.of(tClass)
                 .map(Class::getDeclaredFields)
                 .stream()
@@ -539,8 +542,8 @@ public class OdooRpc {
                 .toArray(String[]::new);
     }
 
-    protected <T> Map<String, Object> getRowMap(T record) {
-
+    @Nonnull
+    protected <T> Map<String, Object> getRowMap(@Nonnull T record) {
         Map<String, Object> map = new HashMap<>();
 
         Optional.ofNullable(record)
@@ -556,13 +559,14 @@ public class OdooRpc {
                             .orElse(f.getName());
                     Object value = f.get(record);
                     map.put(key, value);
-                }, (Exception e) -> {
+                }, (Exception ignored) -> {
+                    // ignore
                 }));
 
         return map;
     }
 
-    protected <T> Optional<T> parseRecord(Class<T> tClass, Map<String, Object> record) {
+    protected <T> Optional<T> parseRecord(@Nonnull Class<T> tClass, @Nonnull Map<String, Object> record) {
         try {
             T instance = tClass.getDeclaredConstructor().newInstance();
 
