@@ -37,7 +37,7 @@ public final class XmlRpcUtil {
                 parameters,
         };
 
-        return XmlRpcUtil.execute(url, "execute_kw", params);
+        return execute(url, "execute_kw", params);
     }
 
     @Nonnull

@@ -29,6 +29,14 @@ public class OdooRpc {
     private final String apiKey;
     private final int uid;
 
+    /**
+     * OdooRpc constructor
+     * @param baseUrl The odoo base url
+     * @param database The database name
+     * @param user The username
+     * @param apiKey The api key
+     * @throws OdooAuthorizationException when authorization failed
+     */
     public OdooRpc(@Nonnull String baseUrl, @Nonnull String database, @Nonnull String user, @Nonnull String apiKey) throws OdooAuthorizationException {
         this.baseUrl = baseUrl;
         this.database = database;
@@ -42,13 +50,13 @@ public class OdooRpc {
      * <p>
      * Authenticate
      *
-     * @return
-     * @throws OdooAuthorizationException
+     * @return uid
+     * @throws OdooAuthorizationException when authorization failed
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#logging-in">Loggin in</a>
      */
     public int login() throws OdooAuthorizationException {
         try {
-            final Object ret = XmlRpcUtil.execute(baseUrl + "/" + PATH_COMMON, "login", new Object[]{database, user, apiKey});
+            final Object ret = execute(baseUrl + "/" + PATH_COMMON, "login", new Object[]{database, user, apiKey});
 
             if (ret instanceof Integer) {
                 return (int) ret;
@@ -68,9 +76,9 @@ public class OdooRpc {
      * <p>
      * Retrieve fields on the model
      *
-     * @param model
-     * @return
-     * @throws OdooCallMethodException
+     * @param model The odoo model
+     * @return a collection of Field
+     * @throws OdooCallMethodException when calling method failed
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#list-record-fields">List record fields</a>
      */
     @Nonnull
@@ -85,7 +93,7 @@ public class OdooRpc {
                     Collections.emptyMap()
             };
 
-            final Object ret = XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
+            final Object ret = execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
 
             return Optional.ofNullable((Map<String, Map<String, Object>>) ret)
                     .map(Map::entrySet)
@@ -104,9 +112,9 @@ public class OdooRpc {
      * <p>
      * Retrieve fields on the model
      *
-     * @param tClass
-     * @return
-     * @throws OdooCallMethodException
+     * @param tClass The class that is annotated with {@link OdooModel}
+     * @return a collection of Field
+     * @throws OdooCallMethodException when calling method failed
      */
     public Collection<Field> fieldsGet(@Nonnull Class<?> tClass) throws OdooCallMethodException {
         String model = getModel(tClass);
@@ -118,14 +126,14 @@ public class OdooRpc {
      * <p>
      * Implementation of odoo's xmlrpc <b>search()</b> method
      *
-     * @param tClass
-     * @param filters
-     * @param order
-     * @param offset
-     * @param limit
-     * @param <T>
-     * @return
-     * @throws OdooCallMethodException
+     * @param tClass The class that is annotated with {@link OdooModel}
+     * @param filters An array of {@link SearchFilter}
+     * @param order The order
+     * @param offset The offset
+     * @param limit The limit
+     * @param <T> The type of class
+     * @return an array of record id
+     * @throws OdooCallMethodException when calling method failed
      */
     public <T> Integer[] search(@Nonnull Class<T> tClass, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         String model = getModel(tClass);
@@ -138,13 +146,13 @@ public class OdooRpc {
      * <p>
      * Implementation of odoo's xmlrpc <b>search()</b> method
      *
-     * @param model
-     * @param filters
-     * @param order
-     * @param offset
-     * @param limit
-     * @return
-     * @throws OdooCallMethodException
+     * @param model The odoo model
+     * @param filters An array of {@link SearchFilter}
+     * @param order The order
+     * @param offset The offset
+     * @param limit The limit
+     * @return an array of record id
+     * @throws OdooCallMethodException when calling method failed
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#list-records">List Records</a>
      */
     @Nonnull
@@ -166,7 +174,7 @@ public class OdooRpc {
                     }}
             };
 
-            return Arrays.stream((Object[]) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params))
+            return Arrays.stream((Object[]) execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params))
                     .map(o -> (Integer) o)
                     .toArray(Integer[]::new);
 
@@ -175,6 +183,19 @@ public class OdooRpc {
         }
     }
 
+    /**
+     * Search Read
+     *
+     * @see #searchRead(String, String[], SearchFilter[], String, Integer, Integer)
+     *
+     * @param model The odoo model
+     * @param filters An array of {@link SearchFilter}
+     * @param order The order
+     * @param offset The offset
+     * @param limit The limit
+     * @return array of map
+     * @throws OdooCallMethodException when calling method failed
+     */
     public Map<String, Object>[] searchRead(@Nonnull String model, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         return searchRead(model, null, filters, order, offset, limit);
     }
@@ -184,13 +205,14 @@ public class OdooRpc {
      * <p>
      * Implementation of odoo's xmlrpc <b>search_read()</b> method
      *
-     * @param model
-     * @param filters
-     * @param order
-     * @param offset
-     * @param limit
-     * @return
-     * @throws OdooCallMethodException
+     * @param model The odoo model
+     * @param fields an array of field
+     * @param filters An array of {@link SearchFilter}
+     * @param order The order
+     * @param offset The offset
+     * @param limit The limit
+     * @return an array of map
+     * @throws OdooCallMethodException when calling method failed
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#search-and-read">Search and Read</a>
      */
     @Nonnull
@@ -213,7 +235,7 @@ public class OdooRpc {
                     }}
             };
 
-            return Arrays.stream((Object[]) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params))
+            return Arrays.stream((Object[]) execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params))
                     .map(o -> (Map<String, Object>) o)
                     .peek(m -> m.forEach((key, value) -> {
                         if (value instanceof Boolean && !(boolean) value) m.replace(key, null);
@@ -230,14 +252,14 @@ public class OdooRpc {
      * <p>
      * Implementation of odoo's xmlrpc <b>search_read()</b> method
      *
-     * @param tClass
-     * @param filters
-     * @param order
-     * @param offset
-     * @param limit
-     * @param <T>
-     * @return
-     * @throws OdooCallMethodException
+     * @param tClass The class that is annotated with {@link OdooModel}
+     * @param filters An array of {@link SearchFilter}
+     * @param order The order
+     * @param offset The offset
+     * @param limit The limit
+     * @param <T> The type of class
+     * @return an array of object
+     * @throws OdooCallMethodException when calling method failed
      */
     public <T> T[] searchRead(@Nonnull Class<T> tClass, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         String model = getModel(tClass);
@@ -257,10 +279,10 @@ public class OdooRpc {
      * <p>
      * Implementation of odoo's xmlrpc <b>search_count()</b>
      *
-     * @param model
-     * @param filters
-     * @return
-     * @throws OdooCallMethodException
+     * @param model The odoo model
+     * @param filters An array of {@link SearchFilter}
+     * @return total of counted record
+     * @throws OdooCallMethodException when calling method failed
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#count-records">Count records</a>
      */
     public int searchCount(@Nonnull String model, SearchFilter[] filters) throws OdooCallMethodException {
@@ -276,7 +298,7 @@ public class OdooRpc {
                     new Object[]{objectFilters}
             };
 
-            return Optional.ofNullable((int) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params))
+            return Optional.ofNullable((Integer) execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params))
                     .orElse(0);
 
         } catch (MalformedURLException | XmlRpcException e) {
@@ -284,6 +306,16 @@ public class OdooRpc {
         }
     }
 
+    /**
+     * Search Count
+     *
+     * @see #searchCount(String, SearchFilter[])
+     *
+     * @param tClazz The class that is annotated with {@link OdooModel}
+     * @param filters An array of {@link SearchFilter}
+     * @return total of counted record
+     * @throws OdooCallMethodException when calling method failed
+     */
     public int searchCount(@Nonnull Class<?> tClazz, SearchFilter[] filters) throws OdooCallMethodException {
         String model = getModel(tClazz);
         return searchCount(model, filters);
@@ -291,11 +323,14 @@ public class OdooRpc {
 
 
     /**
+     * Read
      *
-     * @param tClass
-     * @param recordId
-     * @return
-     * @throws OdooCallMethodException
+     * @see #read(String, String[], int)
+     *
+     * @param tClass The class that is annotated with {@link OdooModel}
+     * @param recordId The record id
+     * @return an optional of map
+     * @throws OdooCallMethodException when calling method failed
      */
     public Optional<Map<String, Object>> read(@Nonnull Class<?> tClass, int recordId) throws OdooCallMethodException {
         String model = getModel(tClass);
@@ -304,11 +339,14 @@ public class OdooRpc {
     }
 
     /**
+     * Read
      *
-     * @param model
-     * @param recordId
-     * @return
-     * @throws OdooCallMethodException
+     * @see #read(String, String[], int)
+     *
+     * @param model The odoo model
+     * @param recordId The record id
+     * @return an optional of map
+     * @throws OdooCallMethodException when calling method failed
      */
     public Optional<Map<String, Object>> read(String model, int recordId) throws OdooCallMethodException {
         return read(model, null, recordId);
@@ -319,10 +357,11 @@ public class OdooRpc {
      * <p>
      * Implementation of odoo's xmlrpc <b>read()</b>
      *
-     * @param model
-     * @param recordId
-     * @return
-     * @throws OdooCallMethodException
+     * @param model The odoo model
+     * @param fields an array of field
+     * @param recordId The record id
+     * @return an optional of map
+     * @throws OdooCallMethodException when calling method failed
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#read-records">Read records</a>
      */
     public Optional<Map<String, Object>> read(@Nonnull String model, String[] fields, int recordId) throws OdooCallMethodException {
@@ -339,7 +378,7 @@ public class OdooRpc {
                     }}
             };
 
-            return Arrays.stream((Object[]) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params))
+            return Arrays.stream((Object[]) execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params))
                     .findFirst()
                     .map(o -> (Map<String, Object>) o)
                     .map(Try.toPeek(m -> m.forEach((key, value) -> {
@@ -356,10 +395,10 @@ public class OdooRpc {
      * <p>
      * Implementation of odoo's xmlrpc <b>create()</b>
      *
-     * @param model
-     * @param record
-     * @return
-     * @throws OdooCallMethodException
+     * @param model The odoo model
+     * @param record The record map
+     * @return new record id
+     * @throws OdooCallMethodException when calling method failed
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#create-records">Create records</a>
      */
     public int create(@Nonnull String model, Map<String, Object> record) throws OdooCallMethodException {
@@ -373,7 +412,7 @@ public class OdooRpc {
                     new Object[]{record}
             };
 
-            return (int) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
+            return (int) execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
 
         } catch (MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
@@ -381,10 +420,13 @@ public class OdooRpc {
     }
 
     /**
+     * Create
      *
-     * @param record
-     * @return
-     * @throws OdooCallMethodException
+     * @see #create(String, Map)
+     *
+     * @param record The record object
+     * @return the new record id
+     * @throws OdooCallMethodException when calling method failed
      */
     public <T> int create(@Nonnull T record) throws OdooCallMethodException {
         String model = getModel(record.getClass());
@@ -397,10 +439,10 @@ public class OdooRpc {
      * <p>
      * Implementation of odoo's xmlrpc <b>write()</b>
      *
-     * @param model
-     * @param recordId
-     * @param record
-     * @throws OdooCallMethodException
+     * @param model The odoo model
+     * @param recordId The record id
+     * @param record The record map
+     * @throws OdooCallMethodException when calling method failed
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#update-records">Update records</a>
      */
     public void write(@Nonnull String model, int recordId, Map<String, Object> record) throws OdooCallMethodException {
@@ -414,7 +456,7 @@ public class OdooRpc {
                     new Object[]{recordId, record},
             };
 
-            XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
+            execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
 
         } catch (MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
@@ -422,10 +464,13 @@ public class OdooRpc {
     }
 
     /**
+     * Write
      *
-     * @param recordId
-     * @param record
-     * @throws OdooCallMethodException
+     * @see #write(String, int, Map)
+     *
+     * @param recordId The record id
+     * @param record The record object
+     * @throws OdooCallMethodException when calling method failed
      */
     public <T> void write(int recordId, @Nonnull T record) throws OdooCallMethodException {
         String model = getModel(record.getClass());
@@ -439,9 +484,9 @@ public class OdooRpc {
      * <p>
      * Implementation of odoo's xmlrpc <b>unlink()</b>
      *
-     * @param model
-     * @param recordId
-     * @throws OdooCallMethodException
+     * @param model The odoo model
+     * @param recordId The record id
+     * @throws OdooCallMethodException when calling method failed
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#delete-records">Delete records</a>
      */
     public void unlink(@Nonnull String model, int recordId) throws OdooCallMethodException {
@@ -455,35 +500,52 @@ public class OdooRpc {
                     new Object[]{recordId},
             };
 
-            XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
+            execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
 
         } catch (MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
         }
     }
 
+    /**
+     * Unlink
+     *
+     * @see #unlink(String, int)
+     *
+     * @param tClass The class that is annotated with {@link OdooModel}
+     * @param recordId The record id
+     * @throws OdooCallMethodException when calling method failed
+     */
     public void unlink(@Nonnull Class<?> tClass, int recordId) throws OdooCallMethodException {
         String model = getModel(tClass);
         unlink(model, recordId);
     }
 
     /**
+     * Post message
      *
-     * @param model
-     * @param recordId
-     * @param body
+     * @see #messagePost(String, int[], MessageType, String)
+     *
+     * @param model The odoo model
+     * @param recordId The record id
+     * @param body The message body
+     * @return new message id
+     * @throws OdooCallMethodException when calling method failed
      */
     public int messagePost(@Nonnull String model, int recordId, String body) throws OdooCallMethodException {
         return messagePost(model, new int[]{recordId}, MessageType.COMMENT, body);
     }
 
     /**
+     * Post message
      *
-     * @param tClass
-     * @param recordId
-     * @param body
-     * @return
-     * @throws OdooCallMethodException
+     * @see #messagePost(String, int, String)
+     *
+     * @param tClass The class that is annotated with {@link OdooModel}
+     * @param recordId The record id
+     * @param body The message body
+     * @return new message id
+     * @throws OdooCallMethodException when calling method failed
      */
     public int messagePost(@Nonnull Class<?> tClass, int recordId, String body) throws OdooCallMethodException {
         String model = getModel(tClass);
@@ -491,13 +553,14 @@ public class OdooRpc {
     }
 
     /**
+     * Post message
      *
-     * @param model
-     * @param recordIds
-     * @param messageType
-     * @param body
-     * @return
-     * @throws OdooCallMethodException
+     * @param model The odoo model
+     * @param recordIds array of record id
+     * @param messageType The message type
+     * @param body The message body
+     * @return new message id
+     * @throws OdooCallMethodException when calling method failed
      */
     public int messagePost(@Nonnull String model, int[] recordIds, MessageType messageType, String body) throws OdooCallMethodException {
         try {
@@ -515,12 +578,18 @@ public class OdooRpc {
                     }}
             };
 
-            return (int) XmlRpcUtil.execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
+            return (int) execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
         } catch (MalformedURLException | XmlRpcException e) {
             throw new OdooCallMethodException(e);
         }
     }
 
+    /**
+     * Get model name from a class
+     * @param tClass The class that is annotated with {@link OdooModel}
+     * @return The model name
+     * @throws OdooCallMethodException when the class is not annotated with {@link OdooModel}
+     */
     @Nonnull
     protected String getModel(@Nonnull Class<?> tClass) throws OdooCallMethodException {
         return Optional.of(tClass)
@@ -529,6 +598,11 @@ public class OdooRpc {
                 .orElseThrow(() -> new OdooCallMethodException("Class [" + tClass.getName() + "] is not annotated with @OdooModel"));
     }
 
+    /**
+     * Get field names from a class
+     * @param tClass The class that is annotated with {@link OdooModel}
+     * @return an array of field name
+     */
     @Nonnull
     protected String[] getFields(@Nonnull Class<?> tClass) {
         return Optional.of(tClass)
@@ -542,11 +616,17 @@ public class OdooRpc {
                 .toArray(String[]::new);
     }
 
+    /**
+     * Get row map from a record object
+     * @param record The record object
+     * @param <T> The type of record
+     * @return The map of the record
+     */
     @Nonnull
     protected <T> Map<String, Object> getRowMap(@Nonnull T record) {
         Map<String, Object> map = new HashMap<>();
 
-        Optional.ofNullable(record)
+        Optional.of(record)
                 .map(Object::getClass)
                 .map(Class::getDeclaredFields)
                 .stream()
@@ -566,6 +646,13 @@ public class OdooRpc {
         return map;
     }
 
+    /**
+     * Parse record from a map to an object
+     * @param tClass The class to be parsed into
+     * @param record The map of the record
+     * @param <T> The type of the object
+     * @return an optional of the object
+     */
     protected <T> Optional<T> parseRecord(@Nonnull Class<T> tClass, @Nonnull Map<String, Object> record) {
         try {
             T instance = tClass.getDeclaredConstructor().newInstance();
@@ -593,5 +680,19 @@ public class OdooRpc {
         } catch (Exception e) {
             return Optional.empty();
         }
+    }
+
+    
+    /**
+     * Execute xml rpc
+     * @param url The url
+     * @param method The method
+     * @param params The parameters
+     * @return The result of the execution
+     * @throws MalformedURLException when the url is malformed
+     * @throws XmlRpcException when the xml rpc execution failed
+     */
+    protected Object execute(String url, String method, Object[] params) throws MalformedURLException, XmlRpcException {
+        return XmlRpcUtil.execute(url, method, params);
     }
 }
