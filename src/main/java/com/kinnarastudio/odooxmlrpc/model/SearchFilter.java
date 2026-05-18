@@ -1,27 +1,52 @@
 package com.kinnarastudio.odooxmlrpc.model;
 
+import com.kinnarastudio.odooxmlrpc.service.SearchBuilder;
+
+/**
+ * A single filter for search criteria
+ */
 public class SearchFilter {
     private final Join join;
     private final String field;
     private final Operator operator;
     private final Object value;
 
-    public SearchFilter(String field, Operator operator, Object value) {
-        this(Join.AND, field, operator, value);
-    }
-
+    /**
+     * Constructs a search filter with default join (AND) and operator (EQUAL)
+     * @param field The field name
+     * @param value The value to compare
+     */
     public SearchFilter(String field, Object value) {
         this(Join.AND, field, Operator.EQUAL, value);
     }
 
+    /**
+     * Constructs a search filter with default join (AND)
+     * @param field The field name
+     * @param operator The operator
+     * @param value The value to compare
+     */
+    public SearchFilter(String field, Operator operator, Object... value) {
+        this(Join.AND, field, operator, value);
+    }
+
+    /**
+     * Constructs a search filter with default operator (EQUAL)
+     * @param join The join operator (AND/OR)
+     * @param field The field name
+     * @param value The value to compare
+     */
     public SearchFilter(Join join, String field, Object value) {
         this(join, field, Operator.EQUAL, value);
     }
 
-    public SearchFilter(String field, Object... values) {
-        this(Join.AND, field, Operator.IN, values);
-    }
-
+    /**
+     * Constructs a search filter
+     * @param join The join operator (AND/OR)
+     * @param field The field name
+     * @param operator The operator
+     * @param value The value to compare
+     */
     public SearchFilter(Join join, String field, Operator operator, Object value) {
         this.join = join;
         this.field = field;
@@ -29,36 +54,36 @@ public class SearchFilter {
         this.value = value;
     }
 
+    /**
+     * Gets the field name
+     * @return The field name
+     */
     public String getField() {
         return field;
     }
 
+    /**
+     * Gets the operator
+     * @return The operator
+     */
     public Operator getOperator() {
         return operator;
     }
 
+    /**
+     * Gets the value
+     * @return The value
+     */
     public Object getValue() {
         return value;
     }
 
+    /**
+     * Gets the join operator
+     * @return The join operator
+     */
     public Join getJoin() {
         return join;
-    }
-
-    public static SearchFilter[] eq(String field, Object value) {
-        return new SearchFilter[] {new SearchFilter(field, Operator.EQUAL, value)};
-    }
-
-    public static SearchFilter[] ne(String field, Object value) {
-        return new SearchFilter[]{new SearchFilter(field, Operator.NOT_EQUAL, value)};
-    }
-
-    public static SearchFilter[] in(String field, Object... values) {
-        return new SearchFilter[]{new SearchFilter(field, Operator.IN, values)};
-    }
-
-    public static SearchFilter[] nin(String field, Object... values) {
-        return new SearchFilter[]{new SearchFilter(field, Operator.NOT_IN, values)};
     }
 
     /**
@@ -73,10 +98,10 @@ public class SearchFilter {
         LESS_EQUAL("<="),
         IN("in"),
         NOT_IN("not in"),
-        LIKE("like"),
-        NOT_LIKE("not like"),
-        ILIKE("ilike"),
-        NOT_ILIKE("not ilike");
+        LIKE("=like"),
+        NOT_LIKE("not =like"),
+        ILIKE("=ilike"),
+        NOT_ILIKE("not =ilike");
 
         private final String symbol;
 
@@ -89,6 +114,12 @@ public class SearchFilter {
             return symbol;
         }
 
+        /**
+         * Parses a string to an Operator
+         * @param value The string value
+         * @return The corresponding Operator
+         * @throws IllegalArgumentException if no operator is found
+         */
         public static Operator parse(String value) {
             for (Operator op : values()) {
                 if (op.symbol.equalsIgnoreCase(value)) {
@@ -97,6 +128,14 @@ public class SearchFilter {
             }
             throw new IllegalArgumentException("No operator with symbol " + value + " found");
         }
+    }
+
+    /**
+     * Gets a new SearchBuilder instance
+     * @return a new SearchBuilder instance
+     */
+    public static SearchBuilder getBuilder() {
+        return new SearchBuilder();
     }
 
     /**
@@ -117,6 +156,12 @@ public class SearchFilter {
             return symbol;
         }
 
+        /**
+         * Parses a string to a Join operator
+         * @param value The string value
+         * @return The corresponding Join operator
+         * @throws IllegalArgumentException if no join operator is found
+         */
         public static Join parse(String value) {
             for (Join join : values()) {
                 if (join.symbol.equalsIgnoreCase(value)) {
@@ -128,23 +173,37 @@ public class SearchFilter {
     }
 
     /**
-     * Operand class
+     * Represents an operand in a search filter, used for XML-RPC serialization.
      */
     public final static class Operand {
         private final String field;
         private final SearchFilter.Operator operator;
         private final Object value;
 
+        /**
+         * Constructs an Operand from a SearchFilter
+         * @param filter The search filter
+         */
         public Operand(SearchFilter filter) {
             this(filter.getField(), filter.getOperator(), filter.getValue());
         }
 
+        /**
+         * Constructs an Operand
+         * @param field The field name
+         * @param operator The operator
+         * @param value The value
+         */
         public Operand(String field, SearchFilter.Operator operator, Object value) {
             this.field = field;
             this.operator = operator;
             this.value = value == null ? false : value;
         }
 
+        /**
+         * Converts the operand to an object array for XML-RPC
+         * @return An object array
+         */
         public Object[] toObjects() {
             return new Object[]{
                     field,

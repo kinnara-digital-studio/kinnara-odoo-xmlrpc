@@ -94,18 +94,23 @@ public class OdooTest {
     public void testSearchRead() throws OdooCallMethodException {
         String model = "hr.employee";
         String[] fields = new String[]{"id", "name", "barcode", "job_id"};
-        SearchFilter[] filter = SearchFilter.eq("job_id", 514);
+        SearchFilter[] filter = SearchFilter.getBuilder()
+//                .and("job_id", 514)
+                .or("job_id", SearchFilter.Operator.LESS, 515)
+                .build();
+
 //        SearchFilter[] filter = SearchFilter.eq("id", 1380);
 //        Map<String, Object>[] records = rpc.searchRead(model, fields, filter, null, null, null);
 
         Arrays.stream(rpc.searchRead(model, fields, filter, null, null, 1))
                 .findFirst()
                 .map(m -> {
+                    String id = String.valueOf(m.get("id"));
                     String name = String.valueOf(m.get("name"));
                     String barcode = String.valueOf(m.get("barcode"));
                     Object[] job_id = (Object[]) m.get("job_id");
                     String jobId = Arrays.stream(job_id).map(String::valueOf).collect(Collectors.joining(";"));
-                    return String.join(" | ", name, barcode, jobId);
+                    return String.join(" | ", id,name, barcode, jobId);
                 })
                 .map(String::valueOf)
                 .ifPresent(System.out::println);
