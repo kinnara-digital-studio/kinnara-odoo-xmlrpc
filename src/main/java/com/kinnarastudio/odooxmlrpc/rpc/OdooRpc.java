@@ -695,4 +695,12 @@ public class OdooRpc {
     protected Object execute(String url, String method, Object[] params) throws MalformedURLException, XmlRpcException {
         return XmlRpcUtil.execute(url, method, params);
     }
+
+    public Object executeKw(String model, String method, Object... args) throws OdooCallMethodException {
+        try {
+            return XmlRpcUtil.executeKw(baseUrl + "/" + PATH_OBJECT, database, uid, apiKey, model, method, args);
+        } catch (MalformedURLException | XmlRpcException e) {
+            throw new OdooCallMethodException(e);
+        }
+    }
 }

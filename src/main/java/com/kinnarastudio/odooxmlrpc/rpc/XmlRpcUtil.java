@@ -27,14 +27,14 @@ public final class XmlRpcUtil {
     }
 
     @Nullable
-    public static Object execute(String url, String database, String uid, String apiKey, String model, String method, Object[] parameters) throws MalformedURLException, XmlRpcException {
+    public static Object executeKw(String url, String database, int uid, String apiKey, String model, String method, Object[] args) throws MalformedURLException, XmlRpcException {
         final Object[] params = new Object[]{
                 database,
                 uid,
                 apiKey,
                 model,
                 method,
-                parameters,
+                args,
         };
 
         return execute(url, "execute_kw", params);

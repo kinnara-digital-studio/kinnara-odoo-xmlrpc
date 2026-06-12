@@ -278,6 +278,18 @@ public class OdooTest {
         }
     }
 
+    @Test
+    public void executeKw() {
+        try {
+            String model = "item.request";
+            rpc.executeKw(model, "get_user_warehouse_per_category");
+        } catch (OdooCallMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+
     /**
      * Baca dari DB
      *
