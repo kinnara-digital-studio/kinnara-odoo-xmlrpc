@@ -282,13 +282,13 @@ public class OdooTest {
     public void executeKw() {
         try {
             String model = "item.request";
-            rpc.executeKw(model, "get_user_warehouse_per_category");
+
+            Object result = rpc.executeKw(model, "get_user_warehouse_per_category", 529);
+            System.out.println("Result: " + result);
         } catch (OdooCallMethodException e) {
             throw new RuntimeException(e);
         }
     }
-
-
 
     /**
      * Baca dari DB

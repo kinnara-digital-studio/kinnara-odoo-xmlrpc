@@ -26,20 +26,6 @@ public final class XmlRpcUtil {
         return ret;
     }
 
-    @Nullable
-    public static Object executeKw(String url, String database, int uid, String apiKey, String model, String method, Object[] args) throws MalformedURLException, XmlRpcException {
-        final Object[] params = new Object[]{
-                database,
-                uid,
-                apiKey,
-                model,
-                method,
-                args,
-        };
-
-        return execute(url, "execute_kw", params);
-    }
-
     @Nonnull
     public static Object[] prefixation(SearchFilter[] filters) {
         if (filters == null || filters.length == 0) {
