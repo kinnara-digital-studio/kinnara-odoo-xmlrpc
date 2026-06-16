@@ -5,6 +5,7 @@ import com.kinnarastudio.odooxmlrpc.model.SearchFilter;
 import com.kinnarastudio.odooxmlrpc.rpc.OdooRpc;
 import com.kinnarastudio.odooxmlrpc.rpc.SynchronizedOdooRpc;
 import com.kinnarastudio.odooxmlrpc.rpc.XmlRpcUtil;
+import model.HrEmployee;
 import model.ProductTemplate;
 import org.junit.Test;
 
@@ -80,14 +81,25 @@ public class OdooTest {
 
     @Test
     public void testRead() throws OdooCallMethodException {
-
         String model = "hr.employee";
         SearchFilter[] filter = null;
-        int recordId = rpc.search(model, filter, null, null, 4)[0];
-        final Map<String, Object> record = rpc.read(model, recordId)
-                .orElseThrow(() -> new OdooCallMethodException("record not found"));
+        int recordId = rpc.search(HrEmployee.class, filter, null, null, 4)[0];
+        final Map<String, Object>[] records = rpc.read(model, new int[]{recordId});
 
-        record.forEach((s, o) -> System.out.println(s + "->" + o));
+        Arrays.stream(records)
+                .map(Map::entrySet)
+                .flatMap(Set::stream)
+                .map(e -> e.getKey() + "->" + e.getValue())
+                .forEach(System.out::println);
+    }
+
+    @Test
+    public void testSearchCount() throws OdooCallMethodException {
+        SearchFilter[] filter = new SearchFilter[]{
+                new SearchFilter("job_id", SearchFilter.Operator.EQUAL, 515)
+        };
+        int count = rpc.searchCount(HrEmployee.class, filter);
+        System.out.println(count);
     }
 
     @Test
@@ -102,21 +114,20 @@ public class OdooTest {
 //        SearchFilter[] filter = SearchFilter.eq("id", 1380);
 //        Map<String, Object>[] records = rpc.searchRead(model, fields, filter, null, null, null);
 
-        Arrays.stream(rpc.searchRead(model, fields, filter, null, null, 1))
-                .findFirst()
+        Arrays.stream(rpc.searchRead(HrEmployee.class, filter, null, null, 2))
                 .map(m -> {
-                    String id = String.valueOf(m.get("id"));
-                    String name = String.valueOf(m.get("name"));
-                    String barcode = String.valueOf(m.get("barcode"));
-                    Object[] job_id = (Object[]) m.get("job_id");
-                    String jobId = Arrays.stream(job_id).map(String::valueOf).collect(Collectors.joining(";"));
-                    return String.join(" | ", id,name, barcode, jobId);
+                    String id = String.valueOf(m.getId());
+                    String name = String.valueOf(m.getName());
+                    String barcode = String.valueOf(m.getBarcode());
+//                    Object[] job_id = (Object[]) m.get("job_id");
+//                    String jobId = Arrays.stream(job_id).map(String::valueOf).collect(Collectors.joining(";"));
+                    return String.join(" | ", id,name, barcode);
                 })
                 .map(String::valueOf)
-                .ifPresent(System.out::println);
+                .forEach(System.out::println);
 //                .forEach(System.out::println);
 
-//        Arrays.stream(records).forEach(System.out::println);h
+//        Arrays.stream(records).forEach(System.out::println);
     }
 
     @Test
@@ -146,17 +157,11 @@ public class OdooTest {
 
     @Test
     public void testCreate() throws OdooCallMethodException {
-        String model = "room.booking";
-        int roomId = 2;
-        int organizerId = 2;
-        final Map<String, Object> record = new HashMap<>() {{
-            put("name", "Training Kecak");
-            put("room_id", 8);
-            put("organizer_id", 2);
-            put("start_datetime", "2025-09-12T08:00:00+07:00");
-            put("stop_datetime", "2025-09-12T09:00:00+07:00");
-        }};
-
+        String model = "stock.movements";
+        SearchFilter[] filter = new SearchFilter[]{
+                new SearchFilter("name", "PB00010")
+        };
+        Map<String, Object> record = rpc.searchRead(model, filter, null, null, 4)[0];
         int recordId = rpc.create(model, record);
 
         System.out.println(recordId);
@@ -164,10 +169,9 @@ public class OdooTest {
 
     @Test
     public void testDelete() throws OdooCallMethodException {
-
-        String model = "stock.movements.lines";
-
-        rpc.unlink(model, 27);
+        String model = "product.pricelist";
+        int[] recordId = rpc.search(model, null, null, null, 4);
+        rpc.unlink(model, recordId[0]);
     }
 
     protected Properties getProperties(String file) {
@@ -185,20 +189,17 @@ public class OdooTest {
         System.out.println(Arrays.stream(new String[0]).anyMatch(String::isEmpty));
     }
 
-
     @Test
     public void testBus() throws OdooCallMethodException {
-        int messageId = rpc.messagePost("purchase.order", 54, "Sending from kecak [" + new Date() + "]");
+        int messageId = rpc.messagePost("purchase.order", 1, "Sending from kecak [" + new Date() + "]");
     }
 
     @Test
     public void testCreatePricelist() throws OdooCallMethodException {
-
         String model = "product.pricelist";
         final Map<String, Object> record = new HashMap<>() {{
             put("name", "Test");
             put("currency_id", 1);
-            put("partner_id", 879);
             put("company_id", false);
         }};
 
@@ -270,7 +271,7 @@ public class OdooTest {
             String model = "purchase.request";
 
             rpc.write(model, 73, new HashMap<>() {{
-                put("status", "rejected");
+                put("name", "rejected");
             }});
 
         } catch (OdooCallMethodException e) {

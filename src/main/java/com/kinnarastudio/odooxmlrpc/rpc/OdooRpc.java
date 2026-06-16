@@ -126,7 +126,7 @@ public class OdooRpc {
      * @return an array of record id
      * @throws OdooCallMethodException when calling method failed
      */
-    public <T> Integer[] search(@Nonnull Class<T> tClass, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
+    public <T> int[] search(@Nonnull Class<T> tClass, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         String model = getModel(tClass);
         return search(model, filters, order, offset, limit);
     }
@@ -147,31 +147,18 @@ public class OdooRpc {
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#list-records">List Records</a>
      */
     @Nonnull
-    public Integer[] search(@Nonnull String model, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
-        try {
-            final Object[] objectFilters = XmlRpcUtil.prefixation(filters);
+    public int[] search(@Nonnull String model, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
+        final Object[] domains = new Object[]{XmlRpcUtil.prefixation(filters)};
 
-            final Object[] params = new Object[]{
-                    database,
-                    uid,
-                    apiKey,
-                    model,
-                    "search",
-                    new Object[]{objectFilters},
-                    new HashMap<String, Object>() {{
-                        if (offset != null) put("offset", offset);
-                        if (limit != null) put("limit", limit);
-                        if (order != null) put("order", order);
-                    }}
-            };
+        final Map<String, Object> namedParams = new HashMap<>() {{
+            if (offset != null) put("offset", offset);
+            if (limit != null) put("limit", limit);
+            if (order != null) put("order", order);
+        }};
 
-            return Arrays.stream((Object[]) execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params))
-                    .map(o -> (Integer) o)
-                    .toArray(Integer[]::new);
-
-        } catch (MalformedURLException | XmlRpcException e) {
-            throw new OdooCallMethodException(e);
-        }
+        return Arrays.stream((Object[]) executeKw(model, "search", domains, namedParams))
+                .mapToInt(o -> (Integer) o)
+                .toArray();
     }
 
     /**
@@ -207,34 +194,22 @@ public class OdooRpc {
      */
     @Nonnull
     public Map<String, Object>[] searchRead(@Nonnull String model, String[] fields, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
-        try {
-            final Object[] objectFilters = XmlRpcUtil.prefixation(filters);
 
-            final Object[] params = new Object[]{
-                    database,
-                    uid,
-                    apiKey,
-                    model,
-                    "search_read",
-                    new Object[]{objectFilters},
-                    new HashMap<String, Object>() {{
-                        if (fields != null && fields.length > 0) put("fields", fields);
-                        if (offset != null) put("offset", offset);
-                        if (limit != null) put("limit", limit);
-                        if (order != null) put("order", order);
-                    }}
-            };
+        final Object[] domain = new Object[]{XmlRpcUtil.prefixation(filters)};
 
-            return Arrays.stream((Object[]) execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params))
-                    .map(o -> (Map<String, Object>) o)
-                    .peek(m -> m.forEach((key, value) -> {
-                        if (value instanceof Boolean && !(boolean) value) m.replace(key, null);
-                    }))
-                    .toArray(Map[]::new);
+        final Map<String, Object> namedParams = new HashMap<>() {{
+            if (fields != null && fields.length > 0) put("fields", fields);
+            if (offset != null) put("offset", offset);
+            if (limit != null) put("limit", limit);
+            if (order != null) put("order", order);
+        }};
 
-        } catch (MalformedURLException | XmlRpcException e) {
-            throw new OdooCallMethodException(e);
-        }
+        return Arrays.stream((Object[]) executeKw(model, "search_read", domain, namedParams))
+                .map(o -> (Map<String, Object>) o)
+                .peek(m -> m.forEach((key, value) -> {
+                    if (value instanceof Boolean && !(boolean) value) m.replace(key, null);
+                }))
+                .toArray(Map[]::new);
     }
 
     /**
@@ -276,24 +251,9 @@ public class OdooRpc {
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#count-records">Count records</a>
      */
     public int searchCount(@Nonnull String model, SearchFilter[] filters) throws OdooCallMethodException {
-        try {
-            final Object[] objectFilters = XmlRpcUtil.prefixation(filters);
-
-            final Object[] params = new Object[]{
-                    database,
-                    uid,
-                    apiKey,
-                    model,
-                    "search_count",
-                    new Object[]{objectFilters}
-            };
-
-            return Optional.ofNullable((Integer) execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params))
-                    .orElse(0);
-
-        } catch (MalformedURLException | XmlRpcException e) {
-            throw new OdooCallMethodException(e);
-        }
+        final Object[] domain = new Object[]{XmlRpcUtil.prefixation(filters)};
+        return Optional.ofNullable((Integer) executeKw(model, "search_count", domain))
+                .orElse(0);
     }
 
     /**
@@ -310,15 +270,16 @@ public class OdooRpc {
         return searchCount(model, filters);
     }
 
-
     /**
      * Read
+     * <p>
+     * Implementation of odoo's xmlrpc <b>read()</b> for a single record on an annotated class
      *
      * @param tClass   The class that is annotated with {@link OdooModel}
      * @param recordId The record id
-     * @return an optional of map
+     * @return an optional of map containing the record data
      * @throws OdooCallMethodException when calling method failed
-     * @see #read(String, String[], int)
+     * @see #read(String, String[], int[])
      */
     public Optional<Map<String, Object>> read(@Nonnull Class<?> tClass, int recordId) throws OdooCallMethodException {
         String model = getModel(tClass);
@@ -328,15 +289,68 @@ public class OdooRpc {
 
     /**
      * Read
+     * <p>
+     * Implementation of odoo's xmlrpc <b>read()</b> for a single record
      *
      * @param model    The odoo model
-     * @param recordId The record id
-     * @return an optional of map
+     * @param recordIds The record id
+     * @return an optional of map containing the record data
      * @throws OdooCallMethodException when calling method failed
-     * @see #read(String, String[], int)
+     * @see #read(String, String[], int[])
      */
-    public Optional<Map<String, Object>> read(String model, int recordId) throws OdooCallMethodException {
-        return read(model, null, recordId);
+    public Optional<Map<String, Object>> read(String model, int recordIds) throws OdooCallMethodException {
+        return read(model, null, recordIds);
+    }
+
+    /**
+     * Read
+     * <p>
+     * Implementation of odoo's xmlrpc <b>read()</b> for a single record with specific fields
+     *
+     * @param model    The odoo model
+     * @param fields   an array of field names to read
+     * @param recordId The record id
+     * @return an optional of map containing the record data
+     * @throws OdooCallMethodException when calling method failed
+     * @see #read(String, String[], int[])
+     */
+    public Optional<Map<String, Object>> read(@Nonnull String model, String[] fields, int recordId) throws OdooCallMethodException {
+        return Arrays.stream(read(model, fields, new int[]{recordId}))
+                .findFirst();
+    }
+
+    /**
+     * Read
+     * <p>
+     * Implementation of odoo's xmlrpc <b>read()</b> for multiple records on an annotated class
+     * <p>
+     * Reads all fields from the model definition
+     *
+     * @param tClass    The class that is annotated with {@link OdooModel}
+     * @param recordIds The array of record ids
+     * @return an array of maps containing the records data
+     * @throws OdooCallMethodException when calling method failed
+     * @see #read(String, String[], int[])
+     */
+    public Map<String, Object>[] read(@Nonnull Class<?> tClass, int[] recordIds) throws OdooCallMethodException {
+        String model = getModel(tClass);
+        String[] fields = getFields(tClass);
+        return read(model, fields, recordIds);
+    }
+
+    /**
+     * Read
+     * <p>
+     * Implementation of odoo's xmlrpc <b>read()</b> for multiple records
+     *
+     * @param model     The odoo model
+     * @param recordIds The array of record ids
+     * @return an array of maps containing the records data
+     * @throws OdooCallMethodException when calling method failed
+     * @see #read(String, String[], int[])
+     */
+    public Map<String, Object>[] read(String model, int[] recordIds) throws OdooCallMethodException {
+        return read(model, null, recordIds);
     }
 
     /**
@@ -344,37 +358,25 @@ public class OdooRpc {
      * <p>
      * Implementation of odoo's xmlrpc <b>read()</b>
      *
-     * @param model    The odoo model
-     * @param fields   an array of field
-     * @param recordId The record id
+     * @param model     The odoo model
+     * @param fields    an array of field
+     * @param recordIds The record id
      * @return an optional of map
      * @throws OdooCallMethodException when calling method failed
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#read-records">Read records</a>
      */
-    public Optional<Map<String, Object>> read(@Nonnull String model, String[] fields, int recordId) throws OdooCallMethodException {
-        try {
-            final Object[] params = new Object[]{
-                    database,
-                    uid,
-                    apiKey,
-                    model,
-                    "read",
-                    new Object[]{recordId},
-                    new HashMap<String, Object>() {{
-                        if (fields != null && fields.length > 0) put("fields", fields);
-                    }}
-            };
+    public Map<String, Object>[] read(@Nonnull String model, String[] fields, int[] recordIds) throws OdooCallMethodException {
+        final Integer[] ids = Arrays.stream(recordIds).boxed().toArray(Integer[]::new);
+        final Map<String, Object> namedParams = new HashMap<>() {{
+            if (fields != null && fields.length > 0) put("fields", fields);
+        }};
 
-            return Arrays.stream((Object[]) execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params))
-                    .findFirst()
-                    .map(o -> (Map<String, Object>) o)
-                    .map(Try.toPeek(m -> m.forEach((key, value) -> {
-                        if (value instanceof Boolean && !(boolean) value) m.replace(key, null);
-                    })));
-
-        } catch (MalformedURLException | XmlRpcException e) {
-            throw new OdooCallMethodException(e);
-        }
+        return Arrays.stream((Object[]) executeKw(model, "read", ids, namedParams))
+                .map(o -> (Map<String, Object>) o)
+                .map(Try.toPeek(m -> m.forEach((key, value) -> {
+                    if (value instanceof Boolean && !(boolean) value) m.replace(key, null);
+                })))
+                .toArray(Map[]::new);
     }
 
     /**
@@ -389,21 +391,7 @@ public class OdooRpc {
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#create-records">Create records</a>
      */
     public int create(@Nonnull String model, Map<String, Object> record) throws OdooCallMethodException {
-        try {
-            final Object[] params = new Object[]{
-                    database,
-                    uid,
-                    apiKey,
-                    model,
-                    "create",
-                    new Object[]{record}
-            };
-
-            return (int) execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
-
-        } catch (MalformedURLException | XmlRpcException e) {
-            throw new OdooCallMethodException(e);
-        }
+        return (int) executeKw(model, "create", record);
     }
 
     /**
@@ -432,21 +420,7 @@ public class OdooRpc {
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#update-records">Update records</a>
      */
     public void write(@Nonnull String model, int recordId, Map<String, Object> record) throws OdooCallMethodException {
-        try {
-            final Object[] params = new Object[]{
-                    database,
-                    uid,
-                    apiKey,
-                    model,
-                    "write",
-                    new Object[]{recordId, record},
-            };
-
-            execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
-
-        } catch (MalformedURLException | XmlRpcException e) {
-            throw new OdooCallMethodException(e);
-        }
+        executeKw(model, "write", recordId, record);
     }
 
     /**
@@ -475,21 +449,7 @@ public class OdooRpc {
      * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html#delete-records">Delete records</a>
      */
     public void unlink(@Nonnull String model, int recordId) throws OdooCallMethodException {
-        try {
-            final Object[] params = new Object[]{
-                    database,
-                    uid,
-                    apiKey,
-                    model,
-                    "unlink",
-                    new Object[]{recordId},
-            };
-
-            execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
-
-        } catch (MalformedURLException | XmlRpcException e) {
-            throw new OdooCallMethodException(e);
-        }
+        executeKw(model, "unlink", recordId);
     }
 
     /**
@@ -545,25 +505,12 @@ public class OdooRpc {
      * @throws OdooCallMethodException when calling method failed
      */
     public int messagePost(@Nonnull String model, int[] recordIds, MessageType messageType, String body) throws OdooCallMethodException {
-        try {
-            final Object[] params = new Object[]{
-                    database,
-                    uid,
-                    apiKey,
-                    model,
-                    "message_post",
-                    recordIds,
-                    new HashMap<String, Object>() {{
-                        put("body", body);
-                        put("message_type", messageType.name().toLowerCase());
-                        put("subtype_xmlid", "mail.mt_comment");
-                    }}
-            };
-
-            return (int) execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
-        } catch (MalformedURLException | XmlRpcException e) {
-            throw new OdooCallMethodException(e);
-        }
+        final Integer[] ids = Arrays.stream(recordIds).boxed().toArray(Integer[]::new);
+        return (int) executeKw(model, "message_post", ids, new HashMap<String, Object>() {{
+            put("body", body);
+            put("message_type", messageType.name().toLowerCase());
+            put("subtype_xmlid", "mail.mt_comment");
+        }});
     }
 
     /**
@@ -656,7 +603,7 @@ public class OdooRpc {
                                 .map(OdooField::value)
                                 .orElseGet(field::getName);
 
-                        if (record.containsValue(fieldName)) {
+                        if (record.containsKey(fieldName)) {
                             Object value = record.get(fieldName);
                             field.set(instance, value);
                         }
@@ -669,23 +616,59 @@ public class OdooRpc {
     }
 
     /**
+     * Execute Kw
+     * <p>
+     * Execute a method on the model with no arguments
      *
-     * @param model
-     * @param method
-     * @param args
-     * @return
-     * @throws OdooCallMethodException
+     * @param model  The odoo model
+     * @param method The method name
+     * @return the result of the method execution
+     * @throws OdooCallMethodException when calling method failed
+     */
+    public Object executeKw(String model, String method) throws OdooCallMethodException {
+        return executeKw(model, method, null, null);
+    }
+
+    /**
+     * Execute Kw
+     * <p>
+     * Execute a method on the model with positional arguments
+     *
+     * @param model  The odoo model
+     * @param method The method name
+     * @param args   The positional arguments
+     * @return the result of the method execution
+     * @throws OdooCallMethodException when calling method failed
      */
     public Object executeKw(String model, String method, Object... args) throws OdooCallMethodException {
+        return executeKw(model, method, args, null);
+    }
+
+    /**
+     * Execute Kw
+     * <p>
+     * Execute a method on the model with positional and/or named arguments
+     * <p>
+     * This is the core method that executes XML-RPC calls to Odoo
+     *
+     * @param model    The odoo model
+     * @param method   The method name to execute
+     * @param posArgs  The positional arguments
+     * @param namedArgs The named arguments
+     * @return the result of the method execution
+     * @throws OdooCallMethodException when calling method failed
+     */
+    public Object executeKw(String model, String method, Object[] posArgs, Map<String, Object> namedArgs) throws OdooCallMethodException {
         try {
-            final Object[] params = new Object[]{
-                    database,
-                    uid,
-                    apiKey,
-                    model,
-                    method,
-                    args
-            };
+            final Object[] params = new ArrayList<>() {{
+                add(database);
+                add(uid);
+                add(apiKey);
+                add(model);
+                add(method);
+                add(posArgs != null ? posArgs : new Object[0]);
+                if(namedArgs != null) add(namedArgs);
+            }}.toArray();
 
             return execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
         } catch (MalformedURLException | XmlRpcException e) {
