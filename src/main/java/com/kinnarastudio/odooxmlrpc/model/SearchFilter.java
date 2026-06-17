@@ -197,7 +197,7 @@ public class SearchFilter {
         public Operand(String field, SearchFilter.Operator operator, Object value) {
             this.field = field;
             this.operator = operator;
-            this.value = value == null ? false : value;
+            this.value = (value == null || value.equals("null")) ? false : value;
         }
 
         /**
