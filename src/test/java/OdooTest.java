@@ -38,8 +38,7 @@ public class OdooTest {
     @Test
     public void testLogin() throws OdooAuthorizationException {
         final OdooRpc rpc = new OdooRpc(baseUrl, database, user, apiKey);
-        int uid = rpc.login();
-        assert uid == 2;
+        assert rpc.getUid() == 2;
     }
 
     @Test
@@ -161,7 +160,7 @@ public class OdooTest {
         SearchFilter[] filter = new SearchFilter[]{
                 new SearchFilter("name", "PB00010")
         };
-        Map<String, Object> record = rpc.searchRead(model, filter, null, null, 4)[0];
+        Map<String, Object> record = rpc.searchRead(model, null, null, null, 4)[0];
         int recordId = rpc.create(model, record);
 
         System.out.println(recordId);

@@ -46,6 +46,10 @@ public class OdooRpc {
         this.uid = login();
     }
 
+    public int getUid() {
+        return uid;
+    }
+
     /**
      * Login
      * <p>
