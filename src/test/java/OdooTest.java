@@ -284,11 +284,21 @@ public class OdooTest {
         try {
             String model = "item.request";
 
-            Object result = rpc.executeKw(model, "get_user_warehouse_per_category", 529);
+            Object result = rpc.executeKw(model, "get_user_warehouse_per_category", 1, 2, 3, new HashMap<>() {{
+                put("id", 1);
+            }});
+
             System.out.println("Result: " + result);
         } catch (OdooCallMethodException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Test
+    public void testCallingMethod() throws OdooAuthorizationException, OdooCallMethodException {
+        Object[] args = new Object[] {529};
+            Object result = rpc.executeKw("item.request", "save_approver_in_list", 529);
+        System.out.println("Result: " + result);
     }
 
     /**

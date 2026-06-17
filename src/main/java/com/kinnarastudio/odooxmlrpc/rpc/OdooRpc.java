@@ -292,7 +292,7 @@ public class OdooRpc {
      * <p>
      * Implementation of odoo's xmlrpc <b>read()</b> for a single record
      *
-     * @param model    The odoo model
+     * @param model     The odoo model
      * @param recordIds The record id
      * @return an optional of map containing the record data
      * @throws OdooCallMethodException when calling method failed
@@ -651,9 +651,9 @@ public class OdooRpc {
      * <p>
      * This is the core method that executes XML-RPC calls to Odoo
      *
-     * @param model    The odoo model
-     * @param method   The method name to execute
-     * @param posArgs  The positional arguments
+     * @param model     The odoo model
+     * @param method    The method name to execute
+     * @param posArgs   The positional arguments
      * @param namedArgs The named arguments
      * @return the result of the method execution
      * @throws OdooCallMethodException when calling method failed
@@ -666,8 +666,8 @@ public class OdooRpc {
                 add(apiKey);
                 add(model);
                 add(method);
-                add(posArgs != null ? posArgs : new Object[0]);
-                if(namedArgs != null) add(namedArgs);
+                add(posArgs != null ? posArgs : new Object[]{new Object[0]});
+                if (namedArgs != null) add(namedArgs);
             }}.toArray();
 
             return execute(baseUrl + "/" + PATH_OBJECT, "execute_kw", params);
