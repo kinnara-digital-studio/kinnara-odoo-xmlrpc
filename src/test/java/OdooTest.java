@@ -94,10 +94,12 @@ public class OdooTest {
 
     @Test
     public void testSearchCount() throws OdooCallMethodException {
-        SearchFilter[] filter = new SearchFilter[]{
-                new SearchFilter("job_id", SearchFilter.Operator.EQUAL, 515)
+        String model = "hr.employee";
+        SearchFilter[] filters = new SearchFilter[]{
+                new SearchFilter("barcode",  SearchFilter.Operator.NOT_EQUAL, "", SearchFilter.Join.AND),
+                new SearchFilter("active", new Object[] {false})
         };
-        int count = rpc.searchCount(HrEmployee.class, filter);
+        int count = rpc.searchCount(model, filters);
         System.out.println(count);
     }
 

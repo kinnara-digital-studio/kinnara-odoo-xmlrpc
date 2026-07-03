@@ -164,7 +164,7 @@ public class SearchFilter {
          */
         public static Join parse(String value) {
             for (Join join : values()) {
-                if (join.symbol.equalsIgnoreCase(value)) {
+                if (join.symbol.equalsIgnoreCase(value) || join.name().equalsIgnoreCase(value)) {
                     return join;
                 }
             }
