@@ -11,12 +11,18 @@ import java.util.function.Predicate;
  * Odoo field data types
  */
 public enum DataType {
-    STRING,
-    INTEGER,
-    FLOAT,
-    BOOLEAN,
-    MANY2ONE,
-    MANY2MANY;
+    STRING(String.class),
+    INTEGER(Integer.class),
+    FLOAT(Float.class),
+    BOOLEAN(Boolean.class),
+    MANY2ONE(Integer.class),
+    MANY2MANY(Integer[].class);
+
+    public final Class<?> clazz;
+
+    DataType(Class<?> clazz) {
+        this.clazz = clazz;
+    }
 
     /**
      * Get {@link DataType} from string value
@@ -34,7 +40,23 @@ public enum DataType {
     }
 
     /**
-     * Parse value based on DataType
+     * Get {@link DataType} from java class
+     * @param clazz java class
+     * @return {@link DataType}
+     */
+    public static DataType parse(Class<?> clazz) {
+        for (DataType dataType : DataType.values()) {
+            if(dataType.clazz.equals(clazz)) {
+                return dataType;
+            }
+        }
+
+        throw new IllegalArgumentException("Unknown java class: " + clazz.getName());
+    }
+
+    /**
+     * Parse odoo typed value into java's
+     *
      * @param rawValue
      * @return
      * @param <T>

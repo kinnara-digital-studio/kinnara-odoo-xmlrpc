@@ -6,7 +6,6 @@ import com.kinnarastudio.odooxmlrpc.rpc.OdooRpc;
 import com.kinnarastudio.odooxmlrpc.rpc.SynchronizedOdooRpc;
 import com.kinnarastudio.odooxmlrpc.rpc.XmlRpcUtil;
 import model.HrEmployee;
-import model.ProductTemplate;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -96,8 +95,8 @@ public class OdooTest {
     public void testSearchCount() throws OdooCallMethodException {
         String model = "hr.employee";
         SearchFilter[] filters = new SearchFilter[]{
-                new SearchFilter("barcode",  SearchFilter.Operator.NOT_EQUAL, "", SearchFilter.Join.AND),
-                new SearchFilter("active", new Object[] {false})
+                new SearchFilter("barcode", SearchFilter.Operator.NOT_EQUAL, "", SearchFilter.Join.AND),
+                new SearchFilter("active", new Object[]{false})
         };
         int count = rpc.searchCount(model, filters);
         System.out.println(count);
@@ -105,24 +104,21 @@ public class OdooTest {
 
     @Test
     public void testSearchRead() throws OdooCallMethodException {
-        String model = "hr.employee";
-        String[] fields = new String[]{"id", "name", "barcode", "job_id"};
-        SearchFilter[] filter = SearchFilter.getBuilder()
-//                .and("job_id", 514)
-                .or("job_id", SearchFilter.Operator.LESS, 515)
-                .build();
+        SearchFilter[] filter = new SearchFilter[]{
+                new SearchFilter(SearchFilter.Join.AND, "user_id", SearchFilter.Operator.NOT_EQUAL, null),
+                new SearchFilter(SearchFilter.Join.OR, "department_id.name", SearchFilter.Operator.ILIKE, "%Marketing%"),
+        };
 
-//        SearchFilter[] filter = SearchFilter.eq("id", 1380);
-//        Map<String, Object>[] records = rpc.searchRead(model, fields, filter, null, null, null);
-
-        Arrays.stream(rpc.searchRead(HrEmployee.class, filter, null, null, 2))
+        HrEmployee[] records = rpc.searchRead(HrEmployee.class, filter, null, null, null);
+        System.out.println(records.length);
+        Arrays.stream(records)
                 .map(m -> {
                     String id = String.valueOf(m.getId());
                     String name = String.valueOf(m.getName());
                     String barcode = String.valueOf(m.getBarcode());
 //                    Object[] job_id = (Object[]) m.get("job_id");
 //                    String jobId = Arrays.stream(job_id).map(String::valueOf).collect(Collectors.joining(";"));
-                    return String.join(" | ", id,name, barcode);
+                    return String.join(" | ", id, name, barcode);
                 })
                 .map(String::valueOf)
                 .forEach(System.out::println);
@@ -133,7 +129,7 @@ public class OdooTest {
 
     @Test
     public void testFieldsGet() throws OdooCallMethodException {
-        final Collection<Field> fields = rpc.fieldsGet(ProductTemplate.class);
+        final Collection<Field> fields = rpc.fieldsGet(HrEmployee.class);
 
         assert !fields.isEmpty();
 
@@ -297,8 +293,8 @@ public class OdooTest {
 
     @Test
     public void testCallingMethod() throws OdooAuthorizationException, OdooCallMethodException {
-        Object[] args = new Object[] {529};
-            Object result = rpc.executeKw("item.request", "save_approver_in_list", 529);
+        Object[] args = new Object[]{529};
+        Object result = rpc.executeKw("item.request", "save_approver_in_list", 529);
         System.out.println("Result: " + result);
     }
 

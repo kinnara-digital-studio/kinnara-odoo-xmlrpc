@@ -38,8 +38,8 @@ public final class XmlRpcUtil {
             if (result.isEmpty()) {
                 result.add(new SearchFilter.Operand(filter));
             } else {
-                SearchFilter.Join operator = filter.getJoin();
-                result.add(0, operator);
+                SearchFilter.Join join = filter.getJoin();
+                result.add(0, join);
                 result.add(new SearchFilter.Operand(filter));
             }
         }
