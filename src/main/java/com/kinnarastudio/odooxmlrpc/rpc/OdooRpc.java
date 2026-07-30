@@ -469,6 +469,30 @@ public class OdooRpc {
         unlink(model, recordId);
     }
 
+    public void unlink(@Nonnull String model, int recordId, @Nonnull String field, int childRecordId) throws OdooCallMethodException {
+        write(model, recordId, new HashMap<>() {{
+            put(field, new Object[]{new Object[]{3, childRecordId}});
+        }});
+    }
+
+    public void link(@Nonnull String model, int recordId, @Nonnull String field, int childRecordId) throws OdooCallMethodException {
+        write(model, recordId, new HashMap<>() {{
+            put(field, new Object[]{new Object[]{4, childRecordId}});
+        }});
+    }
+
+    public void clear(@Nonnull String model, int recordId, @Nonnull String field) throws OdooCallMethodException {
+        write(model, recordId, new HashMap<>() {{
+            put(field, new Object[]{new Object[]{5, 0, 0}});
+        }});
+    }
+
+    public void set(@Nonnull String model, int recordId, @Nonnull String field, int[] childrenRecordId) throws OdooCallMethodException {
+        write(model, recordId, new HashMap<>() {{
+            put(field, new Object[]{new Object[]{6, 0, childrenRecordId}});
+        }});
+    }
+
     /**
      * Post message
      *
