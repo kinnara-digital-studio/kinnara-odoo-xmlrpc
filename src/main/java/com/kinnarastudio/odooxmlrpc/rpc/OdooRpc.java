@@ -5,14 +5,21 @@ import com.kinnarastudio.odooxmlrpc.annotation.OdooField;
 import com.kinnarastudio.odooxmlrpc.annotation.OdooModel;
 import com.kinnarastudio.odooxmlrpc.exception.OdooAuthorizationException;
 import com.kinnarastudio.odooxmlrpc.exception.OdooCallMethodException;
+import com.kinnarastudio.odooxmlrpc.model.DataType;
 import com.kinnarastudio.odooxmlrpc.model.Field;
 import com.kinnarastudio.odooxmlrpc.model.MessageType;
 import com.kinnarastudio.odooxmlrpc.model.SearchFilter;
+import com.kinnarastudio.odooxmlrpc.model.command.Command;
+import com.kinnarastudio.odooxmlrpc.model.command.CommandCreate;
+import com.kinnarastudio.odooxmlrpc.model.command.CommandUpdate;
 import org.apache.xmlrpc.XmlRpcException;
 
 import javax.annotation.Nonnull;
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.util.*;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -237,9 +244,7 @@ public class OdooRpc {
 
         return Arrays.stream(records)
                 .filter(Objects::nonNull)
-                .map(m -> parseRecord(tClass, m))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
+                .map(Try.onFunction(m -> parseRecord(tClass, m)))
                 .toArray(size -> (T[]) java.lang.reflect.Array.newInstance(tClass, size));
     }
 
@@ -408,7 +413,7 @@ public class OdooRpc {
      */
     public <T> int create(@Nonnull T record) throws OdooCallMethodException {
         String model = getModel(record.getClass());
-        Map<String, Object> map = getRowMap(record);
+        Map<String, Object> map = getRowMap(record, CommandCreate::new);
         return create(model, map);
     }
 
@@ -437,7 +442,10 @@ public class OdooRpc {
      */
     public <T> void write(int recordId, @Nonnull T record) throws OdooCallMethodException {
         String model = getModel(record.getClass());
-        Map<String, Object> map = getRowMap(record);
+        Map<String, Object> map = getRowMap(record, o -> {
+            int id = (int) o.get("id");
+            return new CommandUpdate(id, o);
+        });
         write(model, recordId, map);
     }
 
@@ -544,10 +552,7 @@ public class OdooRpc {
                 .map(Class::getDeclaredFields)
                 .stream()
                 .flatMap(Arrays::stream)
-                .map(f -> Optional.of(OdooField.class)
-                        .map(f::getAnnotation)
-                        .map(OdooField::value)
-                        .orElse(f.getName()))
+                .map(this::getFieldName)
                 .toArray(String[]::new);
     }
 
@@ -559,7 +564,7 @@ public class OdooRpc {
      * @return The map of the record
      */
     @Nonnull
-    protected <T> Map<String, Object> getRowMap(@Nonnull T record) {
+    protected <T> Map<String, Object> getRowMap(@Nonnull T record, Function<Map<String, Object>, Command> getCommand) {
         Map<String, Object> map = new HashMap<>();
 
         Optional.of(record)
@@ -569,12 +574,30 @@ public class OdooRpc {
                 .flatMap(Arrays::stream)
                 .forEach(Try.onConsumer(f -> {
                     f.setAccessible(true);
-                    String key = Optional.of(OdooField.class)
-                            .map(f::getAnnotation)
-                            .map(OdooField::value)
-                            .orElse(f.getName());
+                    String key = getFieldName(f);
                     Object value = f.get(record);
-                    map.put(key, value);
+                    if (value != null) {
+                        Class<?> valueClass = value.getClass();
+                        if (valueClass.isAnnotationPresent(OdooModel.class)) {
+                            map.put(key, getRowMap(value, getCommand));
+                        } else if (value instanceof Collection) {
+                            Collection<Object[]> values = ((Collection<?>) value).stream()
+                                    .map(o -> getRowMap(o, getCommand))
+                                    .map(getCommand)
+                                    .map(Command::getCommand)
+                                    .collect(Collectors.toList());
+                            map.put(key, values);
+                        } else if (value instanceof Object[]) {
+                            Collection<Object[]> values = Arrays.stream(((Object[]) value))
+                                    .map(o -> getRowMap(o, getCommand))
+                                    .map(getCommand)
+                                    .map(Command::getCommand)
+                                    .collect(Collectors.toList());
+                            map.put(key, values);
+                        } else {
+                            map.put(key, value);
+                        }
+                    }
                 }, (Exception ignored) -> {
                     // ignore
                 }));
@@ -590,33 +613,61 @@ public class OdooRpc {
      * @param <T>    The type of the object
      * @return an optional of the object
      */
-    protected <T> Optional<T> parseRecord(@Nonnull Class<T> tClass, @Nonnull Map<String, Object> record) {
-        try {
-            T instance = tClass.getDeclaredConstructor().newInstance();
+    protected <T> T parseRecord(@Nonnull Class<T> tClass, @Nonnull Map<String, Object> record) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        T instance = tClass.getDeclaredConstructor().newInstance();
 
-            Optional.of(tClass)
-                    .map(Class::getDeclaredFields)
-                    .stream()
-                    .flatMap(Arrays::stream)
-                    .forEach(Try.onConsumer(field -> {
-                        field.setAccessible(true);
+        Optional.of(tClass)
+                .map(Class::getDeclaredFields)
+                .stream()
+                .flatMap(Arrays::stream)
+                .forEach(Try.onConsumer(field -> {
+                    field.setAccessible(true);
 
-                        // get fieldname from either annotation or field declaration
-                        String fieldName = Optional.of(OdooField.class)
-                                .map(field::getAnnotation)
-                                .map(OdooField::value)
-                                .orElseGet(field::getName);
+                    // get fieldname from either annotation or field declaration
+                    String fieldName = getFieldName(field);
 
-                        if (record.containsKey(fieldName)) {
-                            Object value = record.get(fieldName);
-                            field.set(instance, value);
+                    if (record.containsKey(fieldName)) {
+                        final Class<?> fieldType = field.getType();
+                        final Object value = record.get(fieldName);
+
+                        boolean isModel = fieldType.isAnnotationPresent(OdooModel.class);
+                        if (isModel) {
+
+                        } else {
+                            DataType dataType = DataType.parse(field.getType());
+                            switch (dataType) {
+                                case BOOLEAN:
+                                    field.setBoolean(instance, (Boolean) value);
+                                    break;
+                                case INTEGER:
+                                    if (value instanceof Object[]) {
+                                        field.setInt(instance, (Integer) ((Object[]) value)[0]);
+                                    } else {
+                                        field.setInt(instance, (Integer) value);
+                                    }
+                                    break;
+                                case FLOAT:
+                                    field.setFloat(instance, (Float) value);
+                                    break;
+                                case MANY2ONE:
+                                    field.setInt(instance, (Integer) ((Object[]) value)[0]);
+                                    break;
+                                default:
+                                    field.set(instance, value);
+                            }
                         }
-                    }));
+                    }
+                }));
 
-            return Optional.of(instance);
-        } catch (Exception e) {
-            return Optional.empty();
-        }
+        return instance;
+    }
+
+    protected String getFieldName(java.lang.reflect.Field field) {
+        return Optional.of(OdooField.class)
+                .map(field::getAnnotation)
+                .map(OdooField::value)
+                .filter(Predicate.not(String::isEmpty))
+                .orElseGet(field::getName);
     }
 
     /**

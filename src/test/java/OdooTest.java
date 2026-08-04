@@ -6,6 +6,8 @@ import com.kinnarastudio.odooxmlrpc.rpc.OdooRpc;
 import com.kinnarastudio.odooxmlrpc.rpc.SynchronizedOdooRpc;
 import com.kinnarastudio.odooxmlrpc.rpc.XmlRpcUtil;
 import model.HrEmployee;
+import model.StockMove;
+import model.StockPicking;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -296,6 +298,85 @@ public class OdooTest {
         Object[] args = new Object[]{529};
         Object result = rpc.executeKw("item.request", "save_approver_in_list", 529);
         System.out.println("Result: " + result);
+    }
+
+    @org.junit.Test
+    public void testCreateStockPicking() throws OdooCallMethodException {
+        // 1. Siapkan List of Map untuk line item (stock.move)
+
+        // 2. Ubah data list menjadi Array of Command Odoo untuk relasi One2many
+//        Object[] moveCommands = new Object[stockMoveDataList.size()];
+//        for (int i = 0; i < stockMoveDataList.size(); i++) {
+//            // Bungkus dengan tuple (0, 0, {values}) untuk create new record pada line item
+//            moveCommands[i] = new Object[]{0, 0, stockMoveDataList.get(i)};
+//        }
+
+        // 3. Data utama untuk stock.picking
+        final StockPicking stockPickingData = new StockPicking();
+        stockPickingData.setPicking_type_id(33); // PT. PENJALINDO NUSANTARA: Internal Request PENJALINDO
+        stockPickingData.setLocation_id(185); // PT. P/Stok/WH-HRGA
+        stockPickingData.setGoods_withdrawal_categories(6); // Material request ATK Pabrik
+
+        StockMove stockMove = new StockMove();
+        stockMove.setProduct_id(292); // ATK0000275
+        stockMove.setName("Test");
+        stockMove.setProduct_uom_qty(2.0);
+        stockMove.setProduct_uom(1); // Units
+        stockMove.setLocation_id(185); // PT. P/Stok/WH-HRGA
+        stockMove.setLocation_dest_id(185);
+        StockMove[] stockMoveList = new StockMove[]{stockMove};
+
+        stockPickingData.setMove_ids(stockMoveList);
+
+        // 4. Eksekusi request ke Odoo
+        int pickingId = rpc.create(stockPickingData);
+
+        System.out.println("ID Stock Picking yang berhasil dibuat: " + pickingId);
+
+        rpc.read(StockPicking.class, pickingId)
+                .map(Map::entrySet)
+                .stream()
+                .flatMap(Collection::stream)
+                .map(e -> {
+                    Object value = e.getValue();
+                    if (value instanceof Object[]) {
+                        return e.getKey() + "->" + Arrays.stream((Object[]) value).map(String::valueOf).collect(Collectors.joining(";"));
+                    } else {
+                        return e.getKey() + "->" + value;
+                    }
+                })
+                .forEach(System.out::println);
+    }
+
+    @Test
+    public void testStockPickingRead() throws OdooCallMethodException {
+        rpc.read(StockPicking.class, 921)
+                .map(Map::entrySet)
+                .stream()
+                .flatMap(Collection::stream)
+                .map(e -> {
+                    Object value = e.getValue();
+                    if (value instanceof Object[]) {
+                        return e.getKey() + "->" + Arrays.stream((Object[]) value).map(String::valueOf).collect(Collectors.joining(";"));
+                    } else {
+                        return e.getKey() + "->" + value;
+                    }
+                })
+                .forEach(System.out::println);
+
+        rpc.read(StockMove.class, 15310)
+                .map(m -> m.entrySet())
+                .stream()
+                .flatMap(Collection::stream)
+                .map(e -> {
+                    Object value = e.getValue();
+                    if (value instanceof Object[]) {
+                        return e.getKey() + "->" + Arrays.stream((Object[]) value).map(String::valueOf).collect(Collectors.joining(";"));
+                    } else {
+                        return e.getKey() + "->" + value;
+                    }
+                })
+                .forEach(System.out::println);
     }
 
     /**

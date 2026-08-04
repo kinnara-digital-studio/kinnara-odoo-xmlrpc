@@ -12,15 +12,15 @@ import java.util.function.Predicate;
  */
 public enum DataType {
     STRING(String.class),
-    INTEGER(Integer.class),
-    FLOAT(Float.class),
+    INTEGER(Integer.class, int.class),
+    FLOAT(Float.class, float.class, Double.class, double.class),
     BOOLEAN(Boolean.class),
-    MANY2ONE(Integer.class),
+    MANY2ONE(Object[].class),
     MANY2MANY(Integer[].class);
 
-    public final Class<?> clazz;
+    public final Class<?>[] clazz;
 
-    DataType(Class<?> clazz) {
+    DataType(Class<?>... clazz) {
         this.clazz = clazz;
     }
 
@@ -46,8 +46,10 @@ public enum DataType {
      */
     public static DataType parse(Class<?> clazz) {
         for (DataType dataType : DataType.values()) {
-            if(dataType.clazz.equals(clazz)) {
-                return dataType;
+            for (Class<?> aClass : dataType.clazz) {
+                if(aClass.equals(clazz)) {
+                    return dataType;
+                }
             }
         }
 
