@@ -1,30 +1,14 @@
-package com.kinnarastudio.odooxmlrpc.rpc;
+package com.kinnarastudio.odooxmlrpc.util;
 
 import com.kinnarastudio.odooxmlrpc.model.SearchFilter;
-import org.apache.xmlrpc.XmlRpcException;
-import org.apache.xmlrpc.client.XmlRpcClient;
-import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
 public final class XmlRpcUtil {
     private XmlRpcUtil() {}
-
-    @Nullable
-    public static Object execute(String url, String method, Object[] params) throws MalformedURLException, XmlRpcException {
-        XmlRpcClientConfigImpl config = new XmlRpcClientConfigImpl();
-        config.setServerURL(new URL(url));
-        XmlRpcClient client = new XmlRpcClient();
-        client.setConfig(config);
-        Object ret = client.execute(method, params);
-        return ret;
-    }
 
     @Nonnull
     public static Object[] prefixation(SearchFilter[] filters) {

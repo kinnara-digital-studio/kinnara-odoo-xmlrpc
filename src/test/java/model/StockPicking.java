@@ -3,8 +3,12 @@ package model;
 import com.kinnarastudio.odooxmlrpc.annotation.OdooField;
 import com.kinnarastudio.odooxmlrpc.annotation.OdooModel;
 
-@OdooModel("stock.picking")
+import java.util.List;
+
+@OdooModel(StockPicking.MODEL)
 public class StockPicking {
+    public final static String MODEL = "stock.picking";
+
     @OdooField
     private int picking_type_id;
 
@@ -19,6 +23,7 @@ public class StockPicking {
 
     @OdooField("move_ids")
     private StockMove[] moveIds;
+//    private StockMove[] moveIds;
 
     public int getPicking_type_id() {
         return picking_type_id;
@@ -48,8 +53,8 @@ public class StockPicking {
         this.state = state;
     }
 
-    public void setMove_ids(StockMove[] moveIds) {
-        this.moveIds = moveIds;
+    public void setMove_ids(StockMove[] move_ids) {
+        this.moveIds = move_ids;
     }
 
     public int getGoods_withdrawal_categories() {

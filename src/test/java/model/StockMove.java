@@ -3,8 +3,10 @@ package model;
 import com.kinnarastudio.odooxmlrpc.annotation.OdooField;
 import com.kinnarastudio.odooxmlrpc.annotation.OdooModel;
 
-@OdooModel("stock.move")
+@OdooModel(StockMove.MODEL)
 public class StockMove {
+    public final static String MODEL = "stock.move";
+
     @OdooField
     private int product_id;
 

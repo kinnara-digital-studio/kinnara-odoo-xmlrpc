@@ -2,10 +2,13 @@ package com.kinnarastudio.odooxmlrpc.rpc;
 
 import com.kinnarastudio.odooxmlrpc.exception.OdooAuthorizationException;
 import org.apache.xmlrpc.XmlRpcException;
+import org.apache.xmlrpc.client.XmlRpcClientConfig;
+import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.MalformedURLException;
+import java.net.URL;
 
 /**
  * Odoo RPC
@@ -21,16 +24,16 @@ public class SynchronizedOdooRpc extends OdooRpc {
 
     /**
      *
-     * @param url
-     * @param method
-     * @param params
+     * @param url    The url
+     * @param method The method
+     * @param params The parameters
      * @return
-     * @throws MalformedURLException
      * @throws XmlRpcException
+     * @throws MalformedURLException
      */
     @Nullable
     @Override
-    protected Object execute(String url, String method, Object[] params) throws MalformedURLException, XmlRpcException {
+    protected Object execute(String url, String method, Object[] params) throws XmlRpcException, MalformedURLException {
         synchronized (lock) {
             return super.execute(url, method, params);
         }

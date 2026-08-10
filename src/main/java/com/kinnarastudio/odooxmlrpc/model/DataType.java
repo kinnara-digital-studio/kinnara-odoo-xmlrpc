@@ -15,6 +15,7 @@ public enum DataType {
     INTEGER(Integer.class, int.class),
     FLOAT(Float.class, float.class, Double.class, double.class),
     BOOLEAN(Boolean.class),
+    ONE2MANY(Integer[].class),
     MANY2ONE(Object[].class),
     MANY2MANY(Integer[].class);
 

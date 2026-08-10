@@ -12,11 +12,16 @@ import com.kinnarastudio.odooxmlrpc.model.SearchFilter;
 import com.kinnarastudio.odooxmlrpc.model.command.Command;
 import com.kinnarastudio.odooxmlrpc.model.command.CommandCreate;
 import com.kinnarastudio.odooxmlrpc.model.command.CommandUpdate;
+import com.kinnarastudio.odooxmlrpc.util.XmlRpcUtil;
 import org.apache.xmlrpc.XmlRpcException;
+import org.apache.xmlrpc.client.XmlRpcClient;
+import org.apache.xmlrpc.client.XmlRpcClientConfig;
+import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -30,11 +35,14 @@ import java.util.stream.Collectors;
 public class OdooRpc {
     public final static String PATH_COMMON = "/xmlrpc/2/common";
     public final static String PATH_OBJECT = "/xmlrpc/2/object";
+
     private final String baseUrl;
     private final String database;
     private final String user;
     private final String apiKey;
     private final int uid;
+
+    final XmlRpcClient client = new XmlRpcClient();
 
     /**
      * OdooRpc constructor
@@ -239,12 +247,13 @@ public class OdooRpc {
      */
     public <T> T[] searchRead(@Nonnull Class<T> tClass, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         String model = getModel(tClass);
-        String[] fields = getFields(tClass);
-        Map<String, Object>[] records = searchRead(model, fields, filters, order, offset, limit);
+        String[] javaFields = getFields(tClass);
+        Collection<Field> odooFields = fieldsGet(tClass);
+        Map<String, Object>[] records = searchRead(model, javaFields, filters, order, offset, limit);
 
         return Arrays.stream(records)
                 .filter(Objects::nonNull)
-                .map(Try.onFunction(m -> parseRecord(tClass, m)))
+                .map(Try.onFunction(m -> parseRecord(tClass, odooFields, m)))
                 .toArray(size -> (T[]) java.lang.reflect.Array.newInstance(tClass, size));
     }
 
@@ -290,10 +299,12 @@ public class OdooRpc {
      * @throws OdooCallMethodException when calling method failed
      * @see #read(String, String[], int[])
      */
-    public Optional<Map<String, Object>> read(@Nonnull Class<?> tClass, int recordId) throws OdooCallMethodException {
+    public <T> Optional<T> read(@Nonnull Class<T> tClass, int recordId) throws OdooCallMethodException {
         String model = getModel(tClass);
-        String[] fields = getFields(tClass);
-        return read(model, fields, recordId);
+        String[] attrFields = getFields(tClass);
+        Collection<Field> rpcFields = fieldsGet(tClass);
+        return read(model, attrFields, recordId)
+                .map(Try.onFunction(m -> parseRecord(tClass, rpcFields, m)));
     }
 
     /**
@@ -341,10 +352,15 @@ public class OdooRpc {
      * @throws OdooCallMethodException when calling method failed
      * @see #read(String, String[], int[])
      */
-    public Map<String, Object>[] read(@Nonnull Class<?> tClass, int[] recordIds) throws OdooCallMethodException {
+    public <T> List<T> read(@Nonnull Class<T> tClass, int[] recordIds) throws OdooCallMethodException {
         String model = getModel(tClass);
         String[] fields = getFields(tClass);
-        return read(model, fields, recordIds);
+        Collection<Field> odooFields = fieldsGet(tClass);
+        return Optional.ofNullable(read(model, fields, recordIds))
+                .stream()
+                .flatMap(Arrays::stream)
+                .map(Try.onFunction(m -> parseRecord(tClass, odooFields, m)))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -552,6 +568,7 @@ public class OdooRpc {
                 .map(Class::getDeclaredFields)
                 .stream()
                 .flatMap(Arrays::stream)
+                .filter(f -> f.isAnnotationPresent(OdooField.class))
                 .map(this::getFieldName)
                 .toArray(String[]::new);
     }
@@ -613,53 +630,105 @@ public class OdooRpc {
      * @param <T>    The type of the object
      * @return an optional of the object
      */
-    protected <T> T parseRecord(@Nonnull Class<T> tClass, @Nonnull Map<String, Object> record) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        T instance = tClass.getDeclaredConstructor().newInstance();
+    protected <T> T parseRecord(@Nonnull Class<T> tClass, Collection<Field> odooFields, @Nonnull Map<String, Object> record) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        final T instance = tClass.getDeclaredConstructor().newInstance();
 
         Optional.of(tClass)
                 .map(Class::getDeclaredFields)
                 .stream()
                 .flatMap(Arrays::stream)
-                .forEach(Try.onConsumer(field -> {
-                    field.setAccessible(true);
+                .forEach(Try.onConsumer(javaRefField -> {
+                    javaRefField.setAccessible(true);
 
                     // get fieldname from either annotation or field declaration
-                    String fieldName = getFieldName(field);
+                    final String fieldName = getFieldName(javaRefField);
+                    final Optional<Field> optOdooField = findField(odooFields, fieldName);
 
-                    if (record.containsKey(fieldName)) {
-                        final Class<?> fieldType = field.getType();
-                        final Object value = record.get(fieldName);
+                    if (optOdooField.isEmpty()) return;
+                    if (!record.containsKey(fieldName)) return;
 
-                        boolean isModel = fieldType.isAnnotationPresent(OdooModel.class);
-                        if (isModel) {
+                    final Class<?> attrClass = javaRefField.getType();
 
-                        } else {
-                            DataType dataType = DataType.parse(field.getType());
-                            switch (dataType) {
-                                case BOOLEAN:
-                                    field.setBoolean(instance, (Boolean) value);
-                                    break;
-                                case INTEGER:
-                                    if (value instanceof Object[]) {
-                                        field.setInt(instance, (Integer) ((Object[]) value)[0]);
-                                    } else {
-                                        field.setInt(instance, (Integer) value);
-                                    }
-                                    break;
-                                case FLOAT:
-                                    field.setFloat(instance, (Float) value);
-                                    break;
-                                case MANY2ONE:
-                                    field.setInt(instance, (Integer) ((Object[]) value)[0]);
-                                    break;
-                                default:
-                                    field.set(instance, value);
+                    final boolean isArray = attrClass.isArray();
+                    final boolean isList = List.class.isAssignableFrom(attrClass);
+
+                    final Object value = record.get(fieldName);
+                    final Field odooField = optOdooField.get();
+                    final DataType dataType = odooField.getType();
+
+                    switch (dataType) {
+                        case BOOLEAN:
+                            javaRefField.setBoolean(instance, (Boolean) value);
+                            break;
+                        case INTEGER:
+                            javaRefField.setInt(instance, (Integer) value);
+                            break;
+                        case FLOAT:
+                            javaRefField.setDouble(instance, (Double) value);
+                            break;
+                        case ONE2MANY: {
+                            Integer[] ids = Optional.ofNullable(value)
+                                    .map(v -> ((Object[]) v))
+                                    .stream()
+                                    .flatMap(Arrays::stream)
+                                    .map(i -> (Integer) i)
+                                    .toArray(Integer[]::new);
+
+                            if (attrClass == Integer.class) {
+                                javaRefField.set(instance, ids);
+                            } else if (isArray) {
+                                javaRefField.set(instance, parseOneToMany(attrClass.getComponentType(), ids));
+                            } else {
+                                throw new IllegalArgumentException("Illegal type class [" + attrClass + "] in attribute [" + fieldName + "]");
                             }
+
+                            break;
                         }
+                        case MANY2ONE:
+                            Optional.ofNullable(value)
+                                    .map(v -> ((Object[]) v))
+                                    .stream()
+                                    .flatMap(Arrays::stream)
+                                    .mapToInt(i -> (Integer) i)
+                                    .findFirst()
+                                    .ifPresent(i -> {
+                                        try {
+                                            javaRefField.setInt(instance, i);
+                                        } catch (IllegalAccessException ignored) {
+                                        }
+                                    });
+                            break;
+//                            case MANY2MANY: {
+//                                Integer ids = (Integer) ((Object[]) value)[0];
+//                                break;
+//                            }
+                        default:
+                            javaRefField.set(instance, value);
                     }
                 }));
 
         return instance;
+    }
+
+    protected Optional<Field> findField(Collection<Field> fields, String key) {
+        return fields.stream().filter(f -> key.equals(f.getKey())).findFirst();
+    }
+
+    /**
+     *
+     * @param tClass
+     * @param ids
+     * @return
+     * @throws OdooCallMethodException
+     */
+    protected Object[] parseOneToMany(Class<?> tClass, Integer[] ids) throws OdooCallMethodException {
+        assert tClass != null;
+        assert ids != null;
+
+        final SearchFilter[] filterByIds = new SearchFilter[]{
+                new SearchFilter("id", SearchFilter.Operator.IN, ids)
+        };
+        return searchRead(tClass, filterByIds, null, null, null);
     }
 
     protected String getFieldName(java.lang.reflect.Field field) {
@@ -742,6 +811,10 @@ public class OdooRpc {
      * @throws XmlRpcException       when the xml rpc execution failed
      */
     protected Object execute(String url, String method, Object[] params) throws MalformedURLException, XmlRpcException {
-        return XmlRpcUtil.execute(url, method, params);
+        XmlRpcClientConfigImpl config = new XmlRpcClientConfigImpl();
+        config.setServerURL(new URL(url));
+        config.setEnabledForExtensions(true);
+        client.setConfig(config);
+        return client.execute(method, params);
     }
 }

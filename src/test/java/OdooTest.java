@@ -4,7 +4,7 @@ import com.kinnarastudio.odooxmlrpc.model.Field;
 import com.kinnarastudio.odooxmlrpc.model.SearchFilter;
 import com.kinnarastudio.odooxmlrpc.rpc.OdooRpc;
 import com.kinnarastudio.odooxmlrpc.rpc.SynchronizedOdooRpc;
-import com.kinnarastudio.odooxmlrpc.rpc.XmlRpcUtil;
+import com.kinnarastudio.odooxmlrpc.util.XmlRpcUtil;
 import model.HrEmployee;
 import model.StockMove;
 import model.StockPicking;
@@ -326,14 +326,14 @@ public class OdooTest {
         stockMove.setLocation_dest_id(185);
         StockMove[] stockMoveList = new StockMove[]{stockMove};
 
-        stockPickingData.setMove_ids(stockMoveList);
+//        stockPickingData.setMove_ids(stockMoveList);
 
         // 4. Eksekusi request ke Odoo
         int pickingId = rpc.create(stockPickingData);
 
         System.out.println("ID Stock Picking yang berhasil dibuat: " + pickingId);
 
-        rpc.read(StockPicking.class, pickingId)
+        rpc.read("stock.picking", pickingId)
                 .map(Map::entrySet)
                 .stream()
                 .flatMap(Collection::stream)
@@ -350,33 +350,74 @@ public class OdooTest {
 
     @Test
     public void testStockPickingRead() throws OdooCallMethodException {
-        rpc.read(StockPicking.class, 921)
+//        rpc.read(StockPicking.class, 929)
+//                .map(StockPicking::getMove_ids)
+//                .stream()
+//                .flatMap(Arrays::stream)
+//                .map(StockMove::getName)
+//                .forEach(System.out::println);
+//
+//        rpc.read(StockMove.class, 15310)
+//                .map(StockMove::getName)
+//                .ifPresent(System.out::println);
+
+
+        System.out.println("=========================");
+
+//        rpc.read(StockPicking.MODEL, 928)
+//                .map(Map::entrySet)
+//                .stream()
+//                .flatMap(Collection::stream)
+//                .map(e -> {
+//                    if(e.getValue() instanceof Object[]) {
+//                        return e.getKey() + "->" + e.getValue();
+//                    } else {
+//                        return e.getKey() + "->" + e.getValue();
+//                    }
+//                })
+//                .forEach(System.out::println);
+//
+//        System.out.println("=========================");
+
+        rpc.read(StockPicking.MODEL, 969)
                 .map(Map::entrySet)
                 .stream()
                 .flatMap(Collection::stream)
                 .map(e -> {
-                    Object value = e.getValue();
-                    if (value instanceof Object[]) {
-                        return e.getKey() + "->" + Arrays.stream((Object[]) value).map(String::valueOf).collect(Collectors.joining(";"));
+                    if (e.getValue() instanceof Object[]) {
+                        return e.getKey() + "->" + Arrays.stream(((Object[]) e.getValue())).map(String::valueOf).collect(Collectors.joining(";"));
                     } else {
-                        return e.getKey() + "->" + value;
+                        return e.getKey() + "->" + e.getValue();
                     }
                 })
                 .forEach(System.out::println);
-
-        rpc.read(StockMove.class, 15310)
-                .map(m -> m.entrySet())
+        System.out.println("--------------------------------------");
+        rpc.read(StockMove.MODEL, 15433)
+                .map(Map::entrySet)
                 .stream()
                 .flatMap(Collection::stream)
                 .map(e -> {
-                    Object value = e.getValue();
-                    if (value instanceof Object[]) {
-                        return e.getKey() + "->" + Arrays.stream((Object[]) value).map(String::valueOf).collect(Collectors.joining(";"));
+                    if (e.getValue() instanceof Object[]) {
+                        return e.getKey() + "->" + Arrays.stream(((Object[]) e.getValue())).map(String::valueOf).collect(Collectors.joining(";"));
                     } else {
-                        return e.getKey() + "->" + value;
+                        return e.getKey() + "->" + e.getValue();
                     }
                 })
                 .forEach(System.out::println);
+        System.out.println("--------------------------------------");
+//        rpc.read(StockMove.MODEL, 15430)
+//                .map(Map::entrySet)
+//                .stream()
+//                .flatMap(Collection::stream)
+//                .map(e -> {
+//                    if (e.getValue() instanceof Object[]) {
+//                        return e.getKey() + "->" + Arrays.stream(((Object[]) e.getValue())).map(String::valueOf).collect(Collectors.joining(";"));
+//                    } else {
+//                        return e.getKey() + "->" + e.getValue();
+//                    }
+//                })
+//                .forEach(System.out::println);
+
     }
 
     /**
