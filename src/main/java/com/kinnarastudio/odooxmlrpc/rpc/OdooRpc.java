@@ -19,9 +19,14 @@ import org.apache.xmlrpc.client.XmlRpcClientConfig;
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
 
 import javax.annotation.Nonnull;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -589,10 +594,10 @@ public class OdooRpc {
                 .map(Class::getDeclaredFields)
                 .stream()
                 .flatMap(Arrays::stream)
-                .forEach(Try.onConsumer(f -> {
-                    f.setAccessible(true);
-                    String key = getFieldName(f);
-                    Object value = f.get(record);
+                .forEach(Try.onConsumer(attribute -> {
+                    attribute.setAccessible(true);
+                    String key = getFieldName(attribute);
+                    Object value = attribute.get(record);
                     if (value != null) {
                         Class<?> valueClass = value.getClass();
                         if (valueClass.isAnnotationPresent(OdooModel.class)) {
@@ -611,6 +616,12 @@ public class OdooRpc {
                                     .map(Command::getCommand)
                                     .collect(Collectors.toList());
                             map.put(key, values);
+                        } else if(value instanceof File) {
+                            String base64encoded = encode((File) value);
+                            map.put(key, base64encoded);
+                        } else if(value instanceof byte[]) {
+                            String base64encoded = encode((byte[]) value);
+                            map.put(key, base64encoded);
                         } else {
                             map.put(key, value);
                         }
@@ -816,5 +827,13 @@ public class OdooRpc {
         config.setEnabledForExtensions(true);
         client.setConfig(config);
         return client.execute(method, params);
+    }
+
+    protected String encode(File file) throws IOException {
+        return encode(Files.readAllBytes(file.toPath()));
+    }
+
+    protected String encode(byte[] bytes) {
+        return Base64.getEncoder().encodeToString(bytes);
     }
 }

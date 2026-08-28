@@ -2,6 +2,7 @@ package com.kinnarastudio.odooxmlrpc.model;
 
 import com.kinnarastudio.commons.Try;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
@@ -14,10 +15,11 @@ public enum DataType {
     STRING(String.class),
     INTEGER(Integer.class, int.class),
     FLOAT(Float.class, float.class, Double.class, double.class),
-    BOOLEAN(Boolean.class),
-    ONE2MANY(Integer[].class),
+    BINARY(File.class, Byte[].class, byte[].class),
+    BOOLEAN(Boolean.class, boolean.class),
+    ONE2MANY(Integer[].class, int[].class),
     MANY2ONE(Object[].class),
-    MANY2MANY(Integer[].class);
+    MANY2MANY(Integer[].class, int[].class);
 
     public final Class<?>[] clazz;
 

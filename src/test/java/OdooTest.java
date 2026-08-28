@@ -131,13 +131,16 @@ public class OdooTest {
 
     @Test
     public void testFieldsGet() throws OdooCallMethodException {
-        final Collection<Field> fields = rpc.fieldsGet(HrEmployee.class);
+//        final Collection<Field> fields = rpc.fieldsGet(HrEmployee.class);
+        final Collection<Field> fields = rpc.fieldsGet("hr.training.attachment");
 
         assert !fields.isEmpty();
 
         fields.forEach((f) -> {
             System.out.println("[" + f + "]");
-            f.getMetadata().forEach((k2, v2) -> System.out.println(k2 + "->" + v2));
+//            f.getMetadata().forEach((k2, v2) -> System.out.println(k2 + "->" + v2));
+
+            System.out.println(f.getType() + "->" + f.getKey());
         });
     }
 
