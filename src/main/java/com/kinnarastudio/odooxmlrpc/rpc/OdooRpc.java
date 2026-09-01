@@ -219,21 +219,112 @@ public class OdooRpc {
     @Nonnull
     public Map<String, Object>[] searchRead(@Nonnull String model, String[] fields, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
 
+        // Separate dot-notation fields
+        final Map<String, Set<String>> dotNotationFields = new HashMap<>();
+        final List<String> baseFields = new ArrayList<>();
+
+        if (fields != null) {
+            for (String field : fields) {
+                if (field.contains(".")) {
+                    String[] parts = field.split("\\.", 2);
+                    String baseField = parts[0];
+                    String subField = parts[1];
+                    dotNotationFields.computeIfAbsent(baseField, k -> new HashSet<>()).add(subField);
+                    if (!baseFields.contains(baseField)) {
+                        baseFields.add(baseField);
+                    }
+                } else {
+                    baseFields.add(field);
+                }
+            }
+        }
+        String[] finalFields = fields == null ? null : baseFields.toArray(new String[0]);
+
         final Object[] domain = new Object[]{XmlRpcUtil.prefixation(filters)};
 
         final Map<String, Object> namedParams = new HashMap<>() {{
-            if (fields != null && fields.length > 0) put("fields", fields);
+            if (finalFields != null && finalFields.length > 0) put("fields", finalFields);
             if (offset != null) put("offset", offset);
             if (limit != null) put("limit", limit);
             if (order != null) put("order", order);
         }};
 
-        return Arrays.stream((Object[]) executeKw(model, "search_read", domain, namedParams))
+        Map<String, Object>[] results = Arrays.stream((Object[]) executeKw(model, "search_read", domain, namedParams))
                 .map(o -> (Map<String, Object>) o)
                 .peek(m -> m.forEach((key, value) -> {
                     if (value instanceof Boolean && !(boolean) value) m.replace(key, null);
                 }))
                 .toArray(Map[]::new);
+
+        // Resolve dot-notation fields
+        if (!dotNotationFields.isEmpty() && results.length > 0) {
+            Collection<Field> modelFields = fieldsGet(model);
+
+            for (Map.Entry<String, Set<String>> entry : dotNotationFields.entrySet()) {
+                String baseField = entry.getKey();
+                Set<String> subFields = entry.getValue();
+
+                Optional<Field> odooField = findField(modelFields, baseField);
+                if (odooField.isEmpty()) continue;
+
+                String relationModel = (String) odooField.get().getMetadata().get("relation");
+                if (relationModel == null || relationModel.isEmpty()) continue;
+
+                Set<Integer> relationIds = new HashSet<>();
+                for (Map<String, Object> record : results) {
+                    Object value = record.get(baseField);
+                    if (value instanceof Object[]) {
+                        Object[] arr = (Object[]) value;
+                        if (arr.length > 0 && arr[0] instanceof Integer) {
+                            relationIds.add((Integer) arr[0]);
+                        }
+                    } else if (value instanceof Integer) {
+                        relationIds.add((Integer) value);
+                    }
+                }
+
+                if (relationIds.isEmpty()) continue;
+
+                Integer[] idsArray = relationIds.toArray(new Integer[0]);
+                SearchFilter[] relationFilters = new SearchFilter[]{
+                        new SearchFilter("id", SearchFilter.Operator.IN, idsArray)
+                };
+
+                String[] subFieldsArray = subFields.toArray(new String[0]);
+                Map<String, Object>[] relationResults = searchRead(relationModel, subFieldsArray, relationFilters, null, null, null);
+
+                Map<Integer, Map<String, Object>> relationResultMap = new HashMap<>();
+                for (Map<String, Object> relRecord : relationResults) {
+                    Object idObj = relRecord.get("id");
+                    if (idObj instanceof Integer) {
+                        relationResultMap.put((Integer) idObj, relRecord);
+                    }
+                }
+
+                for (Map<String, Object> record : results) {
+                    Object value = record.get(baseField);
+                    Integer relationId = null;
+                    if (value instanceof Object[]) {
+                        Object[] arr = (Object[]) value;
+                        if (arr.length > 0 && arr[0] instanceof Integer) {
+                            relationId = (Integer) arr[0];
+                        }
+                    } else if (value instanceof Integer) {
+                        relationId = (Integer) value;
+                    }
+
+                    if (relationId != null && relationResultMap.containsKey(relationId)) {
+                        Map<String, Object> relRecord = relationResultMap.get(relationId);
+                        for (String subField : subFields) {
+                            String dotNotationKey = baseField + "." + subField;
+                            record.put(dotNotationKey, relRecord.get(subField));
+                        }
+                    }
+                }
+            }
+        }
+
+        return results;
     }
 
     /**
