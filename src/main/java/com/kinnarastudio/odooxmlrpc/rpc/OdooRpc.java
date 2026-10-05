@@ -15,13 +15,10 @@ import com.kinnarastudio.odooxmlrpc.model.command.CommandUpdate;
 import com.kinnarastudio.odooxmlrpc.util.XmlRpcUtil;
 import org.apache.xmlrpc.XmlRpcException;
 import org.apache.xmlrpc.client.XmlRpcClient;
-import org.apache.xmlrpc.client.XmlRpcClientConfig;
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
 
 import javax.annotation.Nonnull;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
@@ -174,13 +171,13 @@ public class OdooRpc {
     public int[] search(@Nonnull String model, SearchFilter[] filters, String order, Integer offset, Integer limit) throws OdooCallMethodException {
         final Object[] domains = new Object[]{XmlRpcUtil.prefixation(filters)};
 
-        final Map<String, Object> namedParams = new HashMap<>() {{
+        final Map<String, Object> kwargs = new HashMap<>() {{
             if (offset != null) put("offset", offset);
             if (limit != null) put("limit", limit);
             if (order != null) put("order", order);
         }};
 
-        return Arrays.stream((Object[]) executeKw(model, "search", domains, namedParams))
+        return Arrays.stream((Object[]) executeKw(model, "search", domains, kwargs))
                 .mapToInt(o -> (Integer) o)
                 .toArray();
     }
@@ -221,14 +218,14 @@ public class OdooRpc {
 
         final Object[] domain = new Object[]{XmlRpcUtil.prefixation(filters)};
 
-        final Map<String, Object> namedParams = new HashMap<>() {{
+        final Map<String, Object> kwargs = new HashMap<>() {{
             if (fields != null && fields.length > 0) put("fields", fields);
             if (offset != null) put("offset", offset);
             if (limit != null) put("limit", limit);
             if (order != null) put("order", order);
         }};
 
-        return Arrays.stream((Object[]) executeKw(model, "search_read", domain, namedParams))
+        return Arrays.stream((Object[]) executeKw(model, "search_read", domain, kwargs))
                 .map(o -> (Map<String, Object>) o)
                 .peek(m -> m.forEach((key, value) -> {
                     if (value instanceof Boolean && !(boolean) value) m.replace(key, null);
@@ -397,11 +394,40 @@ public class OdooRpc {
      */
     public Map<String, Object>[] read(@Nonnull String model, String[] fields, int[] recordIds) throws OdooCallMethodException {
         final Integer[] ids = Arrays.stream(recordIds).boxed().toArray(Integer[]::new);
-        final Map<String, Object> namedParams = new HashMap<>() {{
+        final Map<String, Object> kwargs = new HashMap<>() {{
             if (fields != null && fields.length > 0) put("fields", fields);
         }};
 
-        return Arrays.stream((Object[]) executeKw(model, "read", ids, namedParams))
+        return Arrays.stream((Object[]) executeKw(model, "read", ids, kwargs))
+                .map(o -> (Map<String, Object>) o)
+                .map(Try.toPeek(m -> m.forEach((key, value) -> {
+                    if (value instanceof Boolean && !(boolean) value) m.replace(key, null);
+                })))
+                .toArray(Map[]::new);
+    }
+
+    /**
+     * Read
+     * <p>
+     * Implementation of odoo's xmlrpc <b>read_read()</b>
+     *
+     * @param model     The odoo model
+     * @param fields    an array of field
+     * @param groupBy   Group by field
+     * @param filters   Filters
+     * @return an optional of map
+     * @throws OdooCallMethodException when calling method failed
+     * @see <a href="https://www.odoo.com/documentation/17.0/developer/reference/external_api.html">External API</a>
+     */
+    public Map<String, Object>[] readGroup(@Nonnull String model, @Nonnull String[] fields, @Nonnull String[] groupBy, SearchFilter[] filters) throws OdooCallMethodException {
+        final Object[] domain = new Object[]{XmlRpcUtil.prefixation(filters)};
+
+        final Map<String, Object> kwargs = new HashMap<>() {{
+            put("fields", fields);
+            put("groupby", groupBy);
+        }};
+
+        return Arrays.stream((Object[]) executeKw(model, "read_group", domain, kwargs))
                 .map(o -> (Map<String, Object>) o)
                 .map(Try.toPeek(m -> m.forEach((key, value) -> {
                     if (value instanceof Boolean && !(boolean) value) m.replace(key, null);
@@ -539,11 +565,13 @@ public class OdooRpc {
      */
     public int messagePost(@Nonnull String model, int[] recordIds, MessageType messageType, String body) throws OdooCallMethodException {
         final Integer[] ids = Arrays.stream(recordIds).boxed().toArray(Integer[]::new);
-        return (int) executeKw(model, "message_post", ids, new HashMap<String, Object>() {{
+        final Map<String, Object> kwargs = new HashMap<>() {{
             put("body", body);
             put("message_type", messageType.name().toLowerCase());
             put("subtype_xmlid", "mail.mt_comment");
-        }});
+        }};
+
+        return (int) executeKw(model, "message_post", ids, kwargs);
     }
 
     /**
@@ -616,10 +644,10 @@ public class OdooRpc {
                                     .map(Command::getCommand)
                                     .collect(Collectors.toList());
                             map.put(key, values);
-                        } else if(value instanceof File) {
+                        } else if (value instanceof File) {
                             String base64encoded = encode((File) value);
                             map.put(key, base64encoded);
-                        } else if(value instanceof byte[]) {
+                        } else if (value instanceof byte[]) {
                             String base64encoded = encode((byte[]) value);
                             map.put(key, base64encoded);
                         } else {

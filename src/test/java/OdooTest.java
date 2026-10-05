@@ -132,7 +132,7 @@ public class OdooTest {
     @Test
     public void testFieldsGet() throws OdooCallMethodException {
 //        final Collection<Field> fields = rpc.fieldsGet(HrEmployee.class);
-        final Collection<Field> fields = rpc.fieldsGet("hr.training.attachment");
+        final Collection<Field> fields = rpc.fieldsGet("hr.employee");
 
         assert !fields.isEmpty();
 
@@ -293,6 +293,71 @@ public class OdooTest {
             System.out.println("Result: " + result);
         } catch (OdooCallMethodException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    @org.junit.Test
+    public void testReadGroup() throws OdooAuthorizationException, OdooCallMethodException {
+        final OdooRpc rpc = new OdooRpc(baseUrl, database, user, apiKey);
+
+//        final String[] fields = new String[]{"department_id", "child_all_count"};
+        final String[] fields = new String[] {"contracts_count:avg"};
+        final String[] groups = new String[] {"department_id"};
+
+//        SearchFilter[] filters = new SearchFilter[] { new SearchFilter("department_id", 307) };
+        SearchFilter[] filters = null;
+
+        Map<String, Object>[] result = rpc.readGroup("hr.employee", fields, groups, filters);
+        System.out.println("Total group yang ditemukan: " + result.length);
+
+        for (Object r : result) {
+            Map<String, Object> record = (Map<String, Object>) r;
+
+            System.out.println(record.keySet().stream().collect(Collectors.joining(";")));
+
+            // Mengambil nilai department_id dan mem-formatnya (bisa Object[] [id, "Nama Dept"] atau boolean false)
+            Object dept = record.get("company_id");
+            String deptStr = (dept instanceof Object[]) ? Arrays.toString((Object[]) dept) : String.valueOf(dept);
+
+            System.out.println("Department: " + deptStr + " | Total Karyawan: " + record.get("__count"));
+        }
+    }
+
+    @org.junit.Test
+    public void testReadGroup2() throws OdooAuthorizationException, OdooCallMethodException {
+        final OdooRpc rpc = new OdooRpc(baseUrl, database, user, apiKey);
+
+        // Domain filter untuk 1 September - 30 September 2026
+        Object[] domain = new Object[]{
+                new Object[]{"create_date", ">=", "2026-09-01 00:00:00"},
+                new Object[]{"create_date", "<=", "2026-09-30 23:59:59"}
+        };
+
+        // Gunakan read_group dengan syntax aggregasi "field:operator"
+        // Operator yang tersedia biasanya: sum, avg, max, min
+        Map<String, Object> kwargs = new HashMap<>();
+        kwargs.put("fields", new String[]{"amount_total:avg"});
+
+        // Group by dikosongkan [] agar Odoo menghitung agregasi seluruh data (tanpa dibagi-bagi per kelompok)
+        // Catatan: Jika versi Odoo yang Anda pakai menolak groupby kosong, Anda bisa isi dengan "create_date:month"
+        kwargs.put("groupby", new Object[]{});
+
+        // Eksekusi method read_group pada model sale.order
+        Object[] result = (Object[]) rpc.executeKw("sale.order", "read_group", new Object[]{ domain }, kwargs);
+
+        for (Object r : result) {
+            Map<String, Object> record = (Map<String, Object>) r;
+
+            // Odoo akan memasukkan hasil rata-ratanya ke dalam key sesuai nama field aslinya
+            Object average = record.get("amount_total");
+            Object count = record.get("__count"); // Odoo biasanya mengembalikan jumlah baris di dalam key __count
+
+            System.out.println("Total Quotation: " + count);
+            if (average instanceof Number) {
+                System.out.printf("Rata-rata Harga: Rp %,.2f%n", ((Number) average).doubleValue());
+            } else {
+                System.out.println("Rata-rata Harga: " + average);
+            }
         }
     }
 
