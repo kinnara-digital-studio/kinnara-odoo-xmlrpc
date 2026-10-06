@@ -300,8 +300,8 @@ public class OdooTest {
     public void testReadGroup() throws OdooAuthorizationException, OdooCallMethodException {
         final OdooRpc rpc = new OdooRpc(baseUrl, database, user, apiKey);
 
-//        final String[] fields = new String[]{"department_id", "child_all_count"};
-        final String[] fields = new String[] {"contracts_count:avg"};
+        final String[] fields = new String[]{"department_id", "child_all_count"};
+//        final String[] fields = new String[] {"contracts_count:avg"};
         final String[] groups = new String[] {"department_id"};
 
 //        SearchFilter[] filters = new SearchFilter[] { new SearchFilter("department_id", 307) };

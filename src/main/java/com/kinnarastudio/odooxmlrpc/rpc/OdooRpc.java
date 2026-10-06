@@ -239,17 +239,14 @@ public class OdooRpc {
 
         final Object[] domain = new Object[]{XmlRpcUtil.prefixation(filters)};
 
-        final Map<String, Object> namedParams = new HashMap<>() {{
-            if (finalFields != null && finalFields.length > 0) put("fields", finalFields);
         final Map<String, Object> kwargs = new HashMap<>() {{
-            if (fields != null && fields.length > 0) put("fields", fields);
+            if (finalFields != null && finalFields.length > 0) put("fields", finalFields);
             if (offset != null) put("offset", offset);
             if (limit != null) put("limit", limit);
             if (order != null) put("order", order);
         }};
 
-        Map<String, Object>[] results = Arrays.stream((Object[]) executeKw(model, "search_read", domain, namedParams))
-        return Arrays.stream((Object[]) executeKw(model, "search_read", domain, kwargs))
+        Map<String, Object>[] results = Arrays.stream((Object[]) executeKw(model, "search_read", domain, kwargs))
                 .map(o -> (Map<String, Object>) o)
                 .peek(m -> m.forEach((key, value) -> {
                     if (value instanceof Boolean && !(boolean) value) m.replace(key, null);
