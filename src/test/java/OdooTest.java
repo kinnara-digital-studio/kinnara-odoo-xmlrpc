@@ -300,7 +300,7 @@ public class OdooTest {
     public void testReadGroup() throws OdooAuthorizationException, OdooCallMethodException {
         final OdooRpc rpc = new OdooRpc(baseUrl, database, user, apiKey);
 
-        final String[] fields = new String[]{"department_id", "child_all_count"};
+        final String[] fields = new String[]{"department_id", "child_all_count", "department_id.company_id.name"};
 //        final String[] fields = new String[] {"contracts_count:avg"};
         final String[] groups = new String[] {"department_id"};
 
@@ -313,13 +313,20 @@ public class OdooTest {
         for (Object r : result) {
             Map<String, Object> record = (Map<String, Object>) r;
 
-            System.out.println(record.keySet().stream().collect(Collectors.joining(";")));
+            System.out.println("Keys: " + record.keySet().stream().collect(Collectors.joining(";")));
 
-            // Mengambil nilai department_id dan mem-formatnya (bisa Object[] [id, "Nama Dept"] atau boolean false)
-            Object dept = record.get("company_id");
-            String deptStr = (dept instanceof Object[]) ? Arrays.toString((Object[]) dept) : String.valueOf(dept);
+            // Mengambil nilai department_id bawaan dari readGroup (Object[] [id, "Nama Dept"] atau boolean false)
+            Object dept = record.get("department_id");
+            System.out.println("Department: " + dept);
 
-            System.out.println("Department: " + deptStr + " | Total Karyawan: " + record.get("__count"));
+            // Mengambil nilai dot notation yang otomatis di-resolve
+            Object deptCompany = record.get("department_id.company_id.name");
+            System.out.println("Department Company: " + deptCompany);
+            System.out.println("-------------------------------------------------");
+        // }
+            // String deptStr = (dept instanceof Object[]) ? Arrays.toString((Object[]) dept) : String.valueOf(dept);
+
+            // System.out.println("Department: " + deptStr + " | Total Karyawan: " + record.get("__count"));
         }
     }
 
